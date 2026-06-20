@@ -25,7 +25,7 @@ export const property = {
   // International format, digits only (no + or spaces).
   // UK example: 07700 900000 → 447700900000
   // Set your real number here before go-live; leave as-is until then.
-  whatsappNumber: '__WHATSAPP_NUMBER__',
+  whatsappNumber: '6591439074',
 
   // Pre-filled message that opens in WhatsApp. Edit freely.
   whatsappDefaultMessage:
