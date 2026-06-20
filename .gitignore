@@ -20,5 +20,8 @@ pnpm-debug.log*
 # macOS-specific files
 .DS_Store
 
+# Hero video — large binary, store separately; drop into public/videos/ before building
+public/videos/hero.mp4
+
 # jetbrains setting folder
 .idea/
