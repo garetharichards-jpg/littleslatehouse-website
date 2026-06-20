@@ -1,13 +1,26 @@
 @import "tailwindcss";
 
+/* Peaches and Cream — same script font used on the Wix site */
+@font-face {
+  font-family: 'Peaches and Cream';
+  src: url('/fonts/peaches-and-cream.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   /* Brand palette */
   --color-brand-slate: #334155;
   --color-brand-stone: #78716c;
   --color-brand-cream: #f8f5f0;
+  --color-brand-gold: #BC9B5D;
 
   /* Slightly warmer stone-50 override */
   --color-stone-50: #faf8f5;
+
+  /* Script display font */
+  --font-script: 'Peaches and Cream', cursive;
 }
 
 /* Base typography */

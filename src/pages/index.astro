@@ -6,46 +6,58 @@ import Layout from '../layouts/Layout.astro';
   title="Little Slate House — Self-catering in Keswick town centre, Lake District"
   description="Three-bedroom Victorian cottage in the heart of Keswick. Sleeps 6. Two minutes from the high street, one from Fitz Park, with fell views. Self-catering in the Lake District."
 >
-  <!-- Hero -->
-  <section class="relative bg-slate-800 text-white overflow-hidden" aria-labelledby="hero-heading">
-    <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 opacity-90"></div>
-    <div
-      class="absolute inset-0 bg-cover bg-center opacity-30"
-      style="background-image: url('/images/PRO-01.jpg')"
-      role="img"
-      aria-label="Front of Little Slate House, a Victorian stone cottage in Keswick"
-    ></div>
+  <!-- Hero — full-bleed video background -->
+  <section class="relative text-white overflow-hidden min-h-[560px] sm:min-h-[640px] lg:min-h-[720px]" aria-labelledby="hero-heading">
+    <!-- Video background; falls back to poster image if video isn't available yet -->
+    <video
+      class="absolute inset-0 w-full h-full object-cover"
+      autoplay
+      muted
+      loop
+      playsinline
+      poster="/images/PRO-01.jpg"
+      aria-hidden="true"
+    >
+      <source src="/videos/hero.mp4" type="video/mp4" />
+    </video>
 
-    <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40">
-      <div class="max-w-2xl">
-        <p class="text-slate-300 text-sm font-medium uppercase tracking-widest mb-4">
-          Keswick · Lake District · Cumbria
-        </p>
-        <h1 id="hero-heading" class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-6">
-          Little Slate House
-        </h1>
-        <p class="text-xl sm:text-2xl text-slate-200 font-light leading-relaxed mb-4">
-          Three bedrooms in the heart of town.
-        </p>
-        <p class="text-base sm:text-lg text-slate-300 leading-relaxed mb-10 max-w-xl">
-          A Victorian cottage two minutes from Market Square, one minute from Fitz Park,
-          and within easy reach of Derwentwater, Catbells, and the walks of Borrowdale.
-          Sleeps 6. No fuss.
-        </p>
-        <div class="flex flex-col sm:flex-row gap-3">
-          <a
-            href="/availability/"
-            class="inline-flex items-center justify-center px-6 py-3 bg-white text-slate-800 font-semibold rounded-md hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-800"
-          >
-            Check dates &amp; enquire
-          </a>
-          <a
-            href="/the-house/"
-            class="inline-flex items-center justify-center px-6 py-3 border border-slate-400 text-white font-medium rounded-md hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-800"
-          >
-            About the house
-          </a>
-        </div>
+    <!-- Dark overlay so text stays readable -->
+    <div class="absolute inset-0 bg-slate-900/55"></div>
+
+    <!-- Content — centred like the original -->
+    <div class="relative flex flex-col items-center justify-center min-h-[560px] sm:min-h-[640px] lg:min-h-[720px] px-4 sm:px-6 lg:px-8 text-center py-20">
+      <p class="text-slate-300 text-xs sm:text-sm font-medium uppercase tracking-widest mb-4">
+        Keswick · Lake District · Cumbria
+      </p>
+
+      <h1
+        id="hero-heading"
+        class="font-[family-name:var(--font-script)] text-[clamp(3rem,10vw,7rem)] text-[#BC9B5D] leading-none mb-6 drop-shadow-lg"
+      >
+        Little Slate House
+      </h1>
+
+      <p class="text-lg sm:text-xl text-slate-200 font-light leading-relaxed mb-3 max-w-xl">
+        Three bedrooms in the heart of Keswick.
+      </p>
+      <p class="text-sm sm:text-base text-slate-300 leading-relaxed mb-10 max-w-lg">
+        Two minutes from Market Square · one minute from Fitz Park ·
+        easy reach of Derwentwater, Catbells, and Borrowdale. Sleeps 6.
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <a
+          href="/availability/"
+          class="inline-flex items-center justify-center px-6 py-3 bg-white text-slate-800 font-semibold rounded-md hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-800"
+        >
+          Check dates &amp; enquire
+        </a>
+        <a
+          href="/the-house/"
+          class="inline-flex items-center justify-center px-6 py-3 border border-slate-300 text-white font-medium rounded-md hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-800"
+        >
+          About the house
+        </a>
       </div>
     </div>
   </section>
