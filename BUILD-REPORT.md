@@ -39,9 +39,10 @@ cd ~/little-slate-house/website
 - **Responsive mobile-first layout** — Tailwind CSS, no JS frameworks
 - **Navigation** — sticky header, mobile hamburger menu, active page highlight
 - **Hero section** — gradient + real photo layer (shows gradient until PRO-01.jpg added)
-- **Enquiry form** — name, email, arrival, departure, party size, message, honeypot bot trap
+- **Enquiry form** — name, email, arrival, departure, party size, message, honeypot bot trap; secondary "Send via WhatsApp instead" button reads live field values
+- **WhatsApp click-to-chat** — wa.me integration (no Cloud API, no Meta, no backend); floating pill, footer link, sidebar button, form secondary action
 - **Gallery** — masonry CSS columns, filterable by category, placeholder overlays
-- **Footer** — nav links, social links (Instagram, Facebook)
+- **Footer** — nav links, social links (Instagram, Facebook, WhatsApp)
 - **SEO** — per-page `<title>`, `<meta description>`, canonical URLs
 - **Open Graph tags** — title, description, image (OG image placeholder noted below)
 - **Schema.org** — `VacationRental` structured data on every page; correct Keswick location, sleeps 6
@@ -54,6 +55,47 @@ cd ~/little-slate-house/website
 ---
 
 ## Placeholders — action required before go-live
+
+### WhatsApp number (set this first — everything activates at once)
+
+**File:** `src/data/house.ts`  
+**Field:** `whatsappNumber`  
+**Current value:** `'__WHATSAPP_NUMBER__'` (placeholder — all WA buttons hidden until this is changed)
+
+Edit the one line:
+```ts
+whatsappNumber: '447700900000',  // ← replace with your real number
+```
+
+Format: international, digits only, no `+` or spaces. UK numbers: drop the leading `0`, prepend `44`.  
+For example: `07700 900000` → `447700900000`.
+
+Then run `npm run build`. All four WhatsApp touchpoints activate simultaneously:
+- Floating pill (fixed bottom-right, all pages)
+- Sidebar button on the Availability & Enquiry page
+- "Send via WhatsApp instead" secondary button in the enquiry form
+- Link in the footer "Find us" column
+
+**Default pre-filled message** (also in `src/data/house.ts`, field `whatsappDefaultMessage`):
+```
+Hi Little Slate House — I'd like to enquire about staying.
+
+Dates: 
+Party size: 
+Name: 
+```
+Edit it freely — it's a plain string, one place, takes effect on next build.
+
+**Integration type:** wa.me click-to-chat only. No WhatsApp Business API, no Meta Business account required, no backend, no API keys. Clicking a WA button opens WhatsApp (app on mobile, web.whatsapp.com on desktop) with the message pre-filled. The guest sends it themselves — nothing is transmitted by the site.
+
+**Verify the generated link format once your number is set:**
+```
+https://wa.me/YOUR_NUMBER?text=Hi%20Little%20Slate%20House%20%E2%80%94%20I'd%20like%20to%20enquire%20about%20staying.%0A%0ADates%3A%20%0AParty%20size%3A%20%0AName%3A%20
+```
+
+The "Send via WhatsApp instead" button in the form reads whatever the guest has already typed (name, dates, party size, message) and pre-fills WhatsApp with those values instead of the default message.
+
+---
 
 ### Photos (highest priority)
 

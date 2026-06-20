@@ -1,4 +1,7 @@
 ---
+import WhatsAppButton from './WhatsAppButton.astro';
+import { property } from '../data/house.ts';
+
 const year = new Date().getFullYear();
 ---
 
@@ -52,6 +55,14 @@ const year = new Date().getFullYear();
             >
               Little Slate House
             </a>
+          </p>
+          <p>
+            <WhatsAppButton
+              number={property.whatsappNumber}
+              message={property.whatsappDefaultMessage}
+              label="WhatsApp"
+              variant="footer"
+            />
           </p>
           <p class="pt-2">
             <a

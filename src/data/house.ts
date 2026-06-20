@@ -20,6 +20,16 @@ export const property = {
   instagram: '@littleslatehouse',
   facebook: 'Little Slate House',
   enquiryWebhookUrl: 'PLACEHOLDER_N8N_WEBHOOK_URL', // replace with n8n webhook on go-live
+
+  // WhatsApp click-to-chat — wa.me only, no Cloud API.
+  // International format, digits only (no + or spaces).
+  // UK example: 07700 900000 → 447700900000
+  // Set your real number here before go-live; leave as-is until then.
+  whatsappNumber: '__WHATSAPP_NUMBER__',
+
+  // Pre-filled message that opens in WhatsApp. Edit freely.
+  whatsappDefaultMessage:
+    "Hi Little Slate House — I'd like to enquire about staying.\n\nDates: \nParty size: \nName: ",
 };
 
 export const bedrooms = [

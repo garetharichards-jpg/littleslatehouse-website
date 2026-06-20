@@ -5,6 +5,20 @@
 // after importing and activating n8n-workflows/website-enquiry-handler.json in n8n.
 // For production: set to the public n8n webhook URL (via Cloudflare Tunnel) or a form service endpoint.
 const WEBHOOK_URL = 'PLACEHOLDER_N8N_WEBHOOK_URL';
+
+interface Props {
+  // Pass the WhatsApp number (digits only) and default message from the page.
+  // If omitted or placeholder, the "Send via WhatsApp instead" button is hidden.
+  whatsappNumber?: string;
+  whatsappDefaultMessage?: string;
+}
+
+const {
+  whatsappNumber = '',
+  whatsappDefaultMessage = '',
+} = Astro.props;
+
+const waActive = !!whatsappNumber && whatsappNumber !== '__WHATSAPP_NUMBER__';
 ---
 
 <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6 sm:p-8">
@@ -128,8 +142,8 @@ const WEBHOOK_URL = 'PLACEHOLDER_N8N_WEBHOOK_URL';
     >
     </div>
 
-    <!-- Submit -->
-    <div>
+    <!-- Submit + optional WhatsApp secondary action -->
+    <div class="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
       <button
         type="submit"
         id="submit-btn"
@@ -137,6 +151,25 @@ const WEBHOOK_URL = 'PLACEHOLDER_N8N_WEBHOOK_URL';
       >
         Send enquiry
       </button>
+
+      {waActive && (
+        <>
+          <span class="hidden sm:block text-stone-300 text-sm select-none" aria-hidden="true">or</span>
+          <button
+            type="button"
+            id="wa-form-btn"
+            data-wa-number={whatsappNumber}
+            data-wa-default={whatsappDefaultMessage}
+            aria-label="Send your enquiry details via WhatsApp instead (opens WhatsApp)"
+            class="inline-flex items-center justify-center gap-2 px-5 py-3 border border-stone-300 bg-white text-stone-700 text-sm font-medium rounded-md hover:bg-stone-50 hover:border-stone-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-colors"
+          >
+            <svg class="h-4 w-4 flex-shrink-0 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            Send via WhatsApp instead
+          </button>
+        </>
+      )}
     </div>
   </form>
 
@@ -155,6 +188,39 @@ const WEBHOOK_URL = 'PLACEHOLDER_N8N_WEBHOOK_URL';
 </div>
 
 <script>
+  // ── WhatsApp "Send via WhatsApp instead" button ──────────────────────────
+  // Reads whatever the guest has typed so far, builds a pre-filled message,
+  // and opens wa.me in a new tab. Pure client-side — no backend involved.
+  const waBtn = document.getElementById('wa-form-btn') as HTMLButtonElement | null;
+
+  waBtn?.addEventListener('click', () => {
+    const number = waBtn.dataset.waNumber ?? '';
+    const defaultMsg = waBtn.dataset.waDefault ?? '';
+
+    const name     = (document.getElementById('name')       as HTMLInputElement | null)?.value.trim();
+    const arrival  = (document.getElementById('arrival')    as HTMLInputElement | null)?.value;
+    const departure = (document.getElementById('departure') as HTMLInputElement | null)?.value;
+    const partySize = (document.getElementById('party-size') as HTMLSelectElement | null)?.value;
+    const message  = (document.getElementById('message')    as HTMLTextAreaElement | null)?.value.trim();
+
+    // Build a human-readable message from whatever fields are filled.
+    // Fall back to the default message if nothing has been typed yet.
+    let text = defaultMsg;
+    if (name || arrival || departure || partySize || message) {
+      const lines = ["Hi Little Slate House — I'd like to enquire about staying."];
+      if (arrival && departure) lines.push(`\nDates: ${arrival} to ${departure}`);
+      else if (arrival)         lines.push(`\nArrival: ${arrival}`);
+      if (partySize)            lines.push(`Party size: ${partySize}`);
+      if (name)                 lines.push(`Name: ${name}`);
+      if (message)              lines.push(`\n${message}`);
+      text = lines.join('\n');
+    }
+
+    const url = `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  });
+
+  // ── Main form submit (email/n8n path) ────────────────────────────────────
   const form = document.getElementById('enquiry-form') as HTMLFormElement | null;
   const successDiv = document.getElementById('form-success');
   const errorDiv = document.getElementById('form-error');
