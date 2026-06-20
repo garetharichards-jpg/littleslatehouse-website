@@ -91,7 +91,7 @@ const schemaData = schema ?? defaultSchema;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
     <!-- Schema.org structured data -->
-    <script type="application/ld+json" set:html={JSON.stringify(schemaData)} />
+    <script type="application/ld+json" is:inline set:html={JSON.stringify(schemaData)} />
 
     <!-- Analytics placeholder — uncomment and add script tag for Cloudflare Web Analytics or Plausible -->
     <!-- TODO: Add analytics before go-live:
@@ -100,8 +100,14 @@ const schemaData = schema ?? defaultSchema;
     -->
   </head>
   <body class="bg-stone-50 text-stone-900 font-sans antialiased">
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-slate-700 focus:text-white focus:rounded-md focus:text-sm focus:font-medium"
+    >
+      Skip to main content
+    </a>
     <Nav />
-    <main>
+    <main id="main-content">
       <slot />
     </main>
     <Footer />

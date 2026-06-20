@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent: auto-starts the website preview server when you log in.
+
+  Install (run once):
+    mkdir -p ~/Library/LaunchAgents
+    cp ~/little-slate-house/website/launchd/co.littleslatehouse.preview.plist \
+       ~/Library/LaunchAgents/co.littleslatehouse.preview.plist
+    launchctl load ~/Library/LaunchAgents/co.littleslatehouse.preview.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/co.littleslatehouse.preview.plist
+    rm ~/Library/LaunchAgents/co.littleslatehouse.preview.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>co.littleslatehouse.preview</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/serve</string>
+    <string>-l</string>
+    <string>4321</string>
+    <string>/Users/g/little-slate-house/website/dist</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/lsh-preview.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/tmp/lsh-preview.log</string>
+</dict>
+</plist>
