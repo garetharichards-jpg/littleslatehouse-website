@@ -1,0 +1,216 @@
+---
+// Webhook URL — configure before go-live.
+// See BUILD-REPORT.md for instructions on setting up the n8n webhook.
+// For preview (tailnet only): set to https://gs-mac-mini.tail54a913.ts.net:5678/webhook/little-slate-house-enquiry
+// after importing and activating n8n-workflows/website-enquiry-handler.json in n8n.
+// For production: set to the public n8n webhook URL (via Cloudflare Tunnel) or a form service endpoint.
+const WEBHOOK_URL = 'PLACEHOLDER_N8N_WEBHOOK_URL';
+---
+
+<div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6 sm:p-8">
+  <h2 class="text-2xl font-semibold text-stone-900 mb-2">Send an enquiry</h2>
+  <p class="text-stone-600 mb-6 text-sm">
+    Tell us your dates and party size and we'll come back to you with availability and rates.
+  </p>
+
+  <form
+    id="enquiry-form"
+    data-webhook={WEBHOOK_URL}
+    class="space-y-5"
+    novalidate
+  >
+    <!-- Name -->
+    <div>
+      <label for="name" class="block text-sm font-medium text-stone-700 mb-1">
+        Your name <span class="text-red-500" aria-hidden="true">*</span>
+      </label>
+      <input
+        type="text"
+        id="name"
+        name="name"
+        required
+        autocomplete="name"
+        class="w-full px-3 py-2 border border-stone-300 rounded-md text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+        placeholder="Jane Smith"
+      />
+    </div>
+
+    <!-- Email -->
+    <div>
+      <label for="email" class="block text-sm font-medium text-stone-700 mb-1">
+        Email address <span class="text-red-500" aria-hidden="true">*</span>
+      </label>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        required
+        autocomplete="email"
+        class="w-full px-3 py-2 border border-stone-300 rounded-md text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+        placeholder="jane@example.com"
+      />
+    </div>
+
+    <!-- Dates row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label for="arrival" class="block text-sm font-medium text-stone-700 mb-1">
+          Arrival date <span class="text-red-500" aria-hidden="true">*</span>
+        </label>
+        <input
+          type="date"
+          id="arrival"
+          name="arrival"
+          required
+          class="w-full px-3 py-2 border border-stone-300 rounded-md text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+        />
+      </div>
+      <div>
+        <label for="departure" class="block text-sm font-medium text-stone-700 mb-1">
+          Departure date <span class="text-red-500" aria-hidden="true">*</span>
+        </label>
+        <input
+          type="date"
+          id="departure"
+          name="departure"
+          required
+          class="w-full px-3 py-2 border border-stone-300 rounded-md text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+        />
+      </div>
+    </div>
+
+    <!-- Party size -->
+    <div>
+      <label for="party-size" class="block text-sm font-medium text-stone-700 mb-1">
+        Party size <span class="text-red-500" aria-hidden="true">*</span>
+      </label>
+      <select
+        id="party-size"
+        name="partySize"
+        required
+        class="w-full px-3 py-2 border border-stone-300 rounded-md text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white"
+      >
+        <option value="">Select…</option>
+        <option value="1">1 guest</option>
+        <option value="2">2 guests</option>
+        <option value="3">3 guests</option>
+        <option value="4">4 guests</option>
+        <option value="5">5 guests</option>
+        <option value="6">6 guests (maximum)</option>
+      </select>
+    </div>
+
+    <!-- Message -->
+    <div>
+      <label for="message" class="block text-sm font-medium text-stone-700 mb-1">
+        Anything else we should know?
+      </label>
+      <textarea
+        id="message"
+        name="message"
+        rows="4"
+        class="w-full px-3 py-2 border border-stone-300 rounded-md text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 resize-y"
+        placeholder="Any questions about the house, the area, or your stay — just ask."
+      ></textarea>
+    </div>
+
+    <!-- Honeypot (bot trap) -->
+    <div class="hidden" aria-hidden="true">
+      <label for="website">Leave this blank</label>
+      <input type="text" id="website" name="website" tabindex="-1" autocomplete="off" />
+    </div>
+
+    <!-- Error message -->
+    <div
+      id="form-error"
+      class="hidden p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700"
+      role="alert"
+    >
+    </div>
+
+    <!-- Submit -->
+    <div>
+      <button
+        type="submit"
+        id="submit-btn"
+        class="w-full sm:w-auto px-6 py-3 bg-slate-700 text-white text-sm font-medium rounded-md hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        Send enquiry
+      </button>
+    </div>
+  </form>
+
+  <!-- Success state -->
+  <div
+    id="form-success"
+    class="hidden p-6 bg-green-50 border border-green-200 rounded-lg text-center"
+    role="status"
+  >
+    <svg class="mx-auto mb-3 h-10 w-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <h3 class="text-lg font-semibold text-green-900 mb-1">Enquiry received</h3>
+    <p class="text-sm text-green-700">We'll be in touch within 24 hours to confirm availability and rates.</p>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById('enquiry-form') as HTMLFormElement | null;
+  const successDiv = document.getElementById('form-success');
+  const errorDiv = document.getElementById('form-error');
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!form || !submitBtn) return;
+
+    // Honeypot check
+    const honeypot = (form.elements.namedItem('website') as HTMLInputElement)?.value;
+    if (honeypot) return; // silently reject bots
+
+    // Basic validation
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    const webhookUrl = form.dataset.webhook ?? '';
+
+    if (!webhookUrl || webhookUrl === 'PLACEHOLDER_N8N_WEBHOOK_URL') {
+      if (errorDiv) {
+        errorDiv.textContent = 'The enquiry form is not yet connected — please contact us via Instagram @littleslatehouse.';
+        errorDiv.classList.remove('hidden');
+      }
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending…';
+    if (errorDiv) errorDiv.classList.add('hidden');
+
+    const data = Object.fromEntries(new FormData(form));
+
+    try {
+      const res = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (res.ok || res.status === 200) {
+        form.classList.add('hidden');
+        successDiv?.classList.remove('hidden');
+      } else {
+        throw new Error(`HTTP ${res.status}`);
+      }
+    } catch {
+      if (errorDiv) {
+        errorDiv.textContent =
+          'Something went wrong sending your enquiry. Please try again or contact us on Instagram @littleslatehouse.';
+        errorDiv.classList.remove('hidden');
+      }
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send enquiry';
+    }
+  });
+</script>

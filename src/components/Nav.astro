@@ -1,0 +1,124 @@
+---
+const navLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/the-house/', label: 'The House' },
+  { href: '/keswick/', label: 'Keswick & the Area' },
+  { href: '/gallery/', label: 'Gallery' },
+  { href: '/availability/', label: 'Availability & Enquiry' },
+];
+
+const current = Astro.url.pathname;
+---
+
+<header class="bg-white/95 backdrop-blur-sm sticky top-0 z-50 border-b border-stone-200">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <!-- Logo / Brand -->
+      <a
+        href="/"
+        class="flex-shrink-0 text-stone-900 hover:text-slate-600 transition-colors"
+        aria-label="Little Slate House — home"
+      >
+        <span class="font-semibold text-lg tracking-tight">Little Slate House</span>
+        <span class="hidden sm:inline text-stone-400 text-sm ml-2">· Keswick</span>
+      </a>
+
+      <!-- Desktop nav -->
+      <nav class="hidden md:flex items-center gap-1" aria-label="Main navigation">
+        {
+          navLinks.map(({ href, label }) => {
+            const isActive = href === '/' ? current === '/' : current.startsWith(href);
+            return (
+              <a
+                href={href}
+                class:list={[
+                  'px-3 py-2 text-sm rounded-md transition-colors',
+                  isActive
+                    ? 'text-slate-700 font-medium bg-slate-50'
+                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50',
+                ]}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {label}
+              </a>
+            );
+          })
+        }
+        <a
+          href="/availability/"
+          class="ml-3 px-4 py-2 bg-slate-700 text-white text-sm font-medium rounded-md hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+        >
+          Enquire
+        </a>
+      </nav>
+
+      <!-- Mobile menu button -->
+      <button
+        id="mobile-menu-toggle"
+        class="md:hidden p-2 rounded-md text-stone-600 hover:text-stone-900 hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-slate-500"
+        aria-controls="mobile-menu"
+        aria-expanded="false"
+        aria-label="Toggle navigation menu"
+      >
+        <svg class="h-6 w-6" id="menu-icon-open" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        <svg class="h-6 w-6 hidden" id="menu-icon-close" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile menu -->
+  <nav
+    id="mobile-menu"
+    class="hidden md:hidden border-t border-stone-200 bg-white"
+    aria-label="Mobile navigation"
+  >
+    <div class="px-4 py-2 space-y-1">
+      {
+        navLinks.map(({ href, label }) => {
+          const isActive = href === '/' ? current === '/' : current.startsWith(href);
+          return (
+            <a
+              href={href}
+              class:list={[
+                'block px-3 py-2 rounded-md text-sm transition-colors',
+                isActive
+                  ? 'text-slate-700 font-medium bg-slate-50'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50',
+              ]}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              {label}
+            </a>
+          );
+        })
+      }
+      <div class="pt-2 pb-1">
+        <a
+          href="/availability/"
+          class="block w-full text-center px-4 py-2 bg-slate-700 text-white text-sm font-medium rounded-md hover:bg-slate-600 transition-colors"
+        >
+          Enquire
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<script>
+  const toggle = document.getElementById('mobile-menu-toggle');
+  const menu = document.getElementById('mobile-menu');
+  const iconOpen = document.getElementById('menu-icon-open');
+  const iconClose = document.getElementById('menu-icon-close');
+
+  toggle?.addEventListener('click', () => {
+    const expanded = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', String(!expanded));
+    menu?.classList.toggle('hidden');
+    iconOpen?.classList.toggle('hidden');
+    iconClose?.classList.toggle('hidden');
+  });
+</script>

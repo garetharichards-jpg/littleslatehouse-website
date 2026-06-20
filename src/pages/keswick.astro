@@ -1,0 +1,227 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { walks, derwentwater, townPlaces } from '../data/area.ts';
+---
+
+<Layout
+  title="Keswick &amp; the Area — Little Slate House"
+  description="Walks, lakes, and town life from the doorstep. Catbells, Latrigg, Borrowdale, Derwentwater, Castlerigg, Market Square — everything within reach of Little Slate House in Keswick."
+  canonicalPath="/keswick/"
+>
+  <!-- Header -->
+  <div class="bg-slate-800 text-white py-16 sm:py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="text-slate-400 text-sm mb-6" aria-label="Breadcrumb">
+        <ol class="flex items-center gap-2">
+          <li><a href="/" class="hover:text-white transition-colors">Home</a></li>
+          <li aria-hidden="true">/</li>
+          <li class="text-slate-200" aria-current="page">Keswick &amp; the Area</li>
+        </ol>
+      </nav>
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-4">Keswick &amp; the Area</h1>
+      <p class="text-slate-300 text-lg max-w-xl">
+        The house is in town — so the fells, the lake, and the high street are all
+        within reach on foot. Here's what we'd point you towards.
+      </p>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 space-y-20">
+
+    <!-- Intro -->
+    <section aria-labelledby="intro-heading">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <h2 id="intro-heading" class="text-3xl font-bold text-stone-900 mb-6">
+            Why Keswick
+          </h2>
+          <div class="space-y-4 text-stone-700 leading-relaxed">
+            <p>
+              Keswick sits at the northern end of the Lake District, with Derwentwater
+              to the south and Skiddaw rising directly behind the town. It's a real
+              town — it has a Co-op and a market and people who live there year-round
+              — but it's also surrounded by some of the best walking in England.
+            </p>
+            <p>
+              The fells here are different from the southern Lakes. Skiddaw and Blencathra
+              are big, rounded, grassy mountains — the kind you can get lost on in cloud.
+              Catbells is the exception: a ridgeline that anyone with reasonable legs can
+              walk. Borrowdale, four miles south, opens up a whole different landscape of
+              narrower valleys and greener fells.
+            </p>
+            <p>
+              From the house you can be on the shore of Derwentwater in twelve minutes,
+              on the summit of Latrigg in ninety, and drinking a coffee in Market Square
+              in two. We think that's a good combination.
+            </p>
+          </div>
+        </div>
+        <div class="aspect-video bg-stone-200 rounded-xl overflow-hidden flex items-center justify-center">
+          <img
+            src="/images/FAM-01.jpg"
+            alt="Derwentwater from the Keswick shoreline with Catbells beyond"
+            class="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Derwentwater -->
+    <section aria-labelledby="derwentwater-heading">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div class="order-2 lg:order-1 aspect-video bg-stone-200 rounded-xl overflow-hidden flex items-center justify-center">
+          <img
+            src="/images/FAM-02.jpg"
+            alt="Catbells above Derwentwater, Lake District"
+            class="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+        <div class="order-1 lg:order-2">
+          <h2 id="derwentwater-heading" class="text-3xl font-bold text-stone-900 mb-6">
+            Derwentwater
+          </h2>
+          <p class="text-stone-700 leading-relaxed mb-4">{derwentwater.description}</p>
+          <div class="bg-stone-50 border border-stone-200 rounded-lg p-4 text-sm text-stone-600">
+            <strong class="text-stone-800">Boat landing:</strong> {derwentwater.boatLanding}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Walks -->
+    <section aria-labelledby="walks-heading">
+      <h2 id="walks-heading" class="text-3xl font-bold text-stone-900 mb-4">
+        Walks from Keswick
+      </h2>
+      <p class="text-stone-600 mb-10 max-w-2xl">
+        These are the walks we'd suggest — not a complete list, but the ones worth
+        knowing about first. All are accessible from Keswick with varying amounts of
+        driving or getting on a boat.
+      </p>
+      <div class="space-y-8">
+        {walks.map((walk, i) => (
+          <article class="grid grid-cols-1 sm:grid-cols-4 gap-6 pb-8 border-b border-stone-200 last:border-0 last:pb-0">
+            <div class="sm:col-span-1">
+              <div class="aspect-square bg-stone-200 rounded-xl overflow-hidden flex items-center justify-center">
+                <img
+                  src={`/images/${i < 2 ? 'FAM-0' + (i + 2) : 'FAM-04'}.jpg`}
+                  alt={`${walk.name} walk in the Lake District near Keswick`}
+                  class="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+            <div class="sm:col-span-3">
+              <div class="flex items-start justify-between gap-4 mb-2">
+                <h3 class="text-xl font-semibold text-stone-900">{walk.name}</h3>
+                <span class={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
+                  walk.difficulty.startsWith('Easy') ? 'bg-green-100 text-green-700' :
+                  walk.difficulty.startsWith('Mod') ? 'bg-amber-100 text-amber-700' :
+                  'bg-red-100 text-red-700'
+                }`}>{walk.difficulty}</span>
+              </div>
+              <p class="text-sm text-stone-400 mb-3">{walk.distance} &middot; Start: {walk.startPoint}</p>
+              <p class="text-stone-700 leading-relaxed">{walk.description}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <!-- Town -->
+    <section aria-labelledby="town-heading">
+      <h2 id="town-heading" class="text-3xl font-bold text-stone-900 mb-4">
+        The town
+      </h2>
+      <p class="text-stone-600 mb-10 max-w-2xl">
+        Keswick is small enough to walk end-to-end in twenty minutes and big enough
+        to have everything you need for a week's stay. A few places worth knowing.
+      </p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {townPlaces.map((place) => (
+          <article class="bg-stone-50 border border-stone-200 rounded-xl p-6">
+            <div class="flex items-start justify-between gap-4 mb-3">
+              <h3 class="font-semibold text-stone-900">{place.name}</h3>
+              <span class="text-xs text-stone-400 bg-stone-100 px-2 py-1 rounded-full flex-shrink-0">
+                {place.type}
+              </span>
+            </div>
+            <p class="text-sm text-stone-700 leading-relaxed">{place.description}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <!-- Castlerigg image feature -->
+    <section aria-labelledby="castlerigg-heading" class="relative rounded-2xl overflow-hidden">
+      <div class="aspect-video sm:aspect-[21/9] bg-stone-900 relative flex items-center justify-center">
+        <img
+          src="/images/FAM-05.jpg"
+          alt="Castlerigg Stone Circle at dusk with fell panorama around it"
+          class="w-full h-full object-cover opacity-60"
+          loading="lazy"
+        />
+        <div class="absolute inset-0 flex items-center justify-center p-6">
+          <div class="text-white text-center max-w-lg">
+            <h2 id="castlerigg-heading" class="text-3xl sm:text-4xl font-bold mb-4">
+              Castlerigg Stone Circle
+            </h2>
+            <p class="text-white/90 leading-relaxed">
+              Twenty minutes' walk from the edge of town. Neolithic. The views alone are
+              worth the walk — but the stones are something else.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Getting here -->
+    <section aria-labelledby="getting-here-heading">
+      <h2 id="getting-here-heading" class="text-2xl font-bold text-stone-900 mb-6">
+        Getting to Keswick
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
+        <div class="bg-stone-50 border border-stone-200 rounded-xl p-5">
+          <h3 class="font-semibold text-stone-900 mb-2">By car</h3>
+          <p class="text-stone-700 leading-relaxed">
+            The M6 brings you to junction 40 (Penrith), then the A66 west into Keswick —
+            about 18 miles. Total journey from Manchester is around 2 hours; from London
+            around 5. Parking in town is pay-and-display at several car parks.
+          </p>
+        </div>
+        <div class="bg-stone-50 border border-stone-200 rounded-xl p-5">
+          <h3 class="font-semibold text-stone-900 mb-2">By train</h3>
+          <p class="text-stone-700 leading-relaxed">
+            The nearest station is Penrith on the West Coast Main Line (Avanti West Coast
+            from London Euston, about 2h20 to Penrith). From Penrith, the 554 bus runs
+            regularly to Keswick — around 45 minutes.
+          </p>
+        </div>
+        <div class="bg-stone-50 border border-stone-200 rounded-xl p-5">
+          <h3 class="font-semibold text-stone-900 mb-2">Getting around</h3>
+          <p class="text-stone-700 leading-relaxed">
+            Keswick is walkable for most things. The Keswick Launch boats connect you to
+            Derwentwater's shores. Stagecoach buses serve Borrowdale (79 service) and
+            wider Cumbria. A car is useful for Honister, Buttermere, and the western fells.
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- CTA -->
+  <div class="bg-stone-100 border-t border-stone-200 py-12">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-xl font-bold text-stone-900 mb-3">Ready to plan your stay?</h2>
+      <p class="text-stone-600 mb-6">Tell us your dates and we'll come back with availability.</p>
+      <a
+        href="/availability/"
+        class="inline-flex items-center px-6 py-3 bg-slate-700 text-white font-semibold rounded-md hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+      >
+        Check dates &amp; enquire
+      </a>
+    </div>
+  </div>
+</Layout>

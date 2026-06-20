@@ -1,0 +1,285 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { bedrooms, amenities } from '../data/house.ts';
+---
+
+<Layout
+  title="The House — Little Slate House, Keswick"
+  description="Three bedrooms, sleeps 6. Victorian self-catering cottage in Keswick town centre. Wood-burning stove, boot room, full kitchen, fell views."
+  canonicalPath="/the-house/"
+>
+  <!-- Page header -->
+  <div class="bg-slate-800 text-white py-16 sm:py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="text-slate-400 text-sm mb-6" aria-label="Breadcrumb">
+        <ol class="flex items-center gap-2">
+          <li><a href="/" class="hover:text-white transition-colors">Home</a></li>
+          <li aria-hidden="true">/</li>
+          <li class="text-slate-200" aria-current="page">The House</li>
+        </ol>
+      </nav>
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-4">The House</h1>
+      <p class="text-slate-300 text-lg max-w-xl">
+        Three bedrooms, sleeps 6. A Victorian cottage in Keswick town centre — well-equipped
+        and straightforward, with everything you need for a week in the Lake District.
+      </p>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <!-- Main content -->
+      <div class="lg:col-span-2 space-y-14">
+
+        <!-- Overview -->
+        <section aria-labelledby="overview-heading">
+          <h2 id="overview-heading" class="text-2xl font-bold text-stone-900 mb-6">
+            Overview
+          </h2>
+          <div class="space-y-4 text-stone-700 leading-relaxed">
+            <p>
+              Little Slate House is a three-bedroom Victorian stone cottage on a quiet
+              residential street in Keswick — the kind that looks right at home in a
+              Lakeland town. The house has been renovated with self-catering in mind:
+              a properly equipped kitchen, a sitting room with a working wood-burning
+              stove, and a boot room with space for boots, waterproofs, and wet kit.
+            </p>
+            <p>
+              It sleeps six across three bedrooms on two floors, with a bathroom on the
+              first floor and a shower room on the second. The layout suits a family,
+              two couples, or a group of six friends equally well.
+            </p>
+          </div>
+        </section>
+
+        <!-- Bedrooms -->
+        <section aria-labelledby="bedrooms-heading">
+          <h2 id="bedrooms-heading" class="text-2xl font-bold text-stone-900 mb-6">
+            Bedrooms
+          </h2>
+          <p class="text-stone-600 mb-6">
+            The house sleeps 6 across three bedrooms. Maximum occupancy is 6 — the
+            house is not suitable for more.
+          </p>
+          <div class="space-y-4">
+            {bedrooms.map((room) => (
+              <div class="bg-stone-50 border border-stone-200 rounded-xl p-6">
+                <div class="flex items-start justify-between gap-4 mb-2">
+                  <h3 class="font-semibold text-stone-900 text-lg">{room.name}</h3>
+                  <span class="text-xs text-stone-400 bg-stone-100 px-2 py-1 rounded-full flex-shrink-0">
+                    {room.floor}
+                  </span>
+                </div>
+                <p class="text-stone-700 font-medium mb-1">{room.beds}</p>
+                <p class="text-sm text-stone-500">{room.notes}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <!-- Sitting room and wood burner -->
+        <section aria-labelledby="sitting-room-heading">
+          <div class="aspect-video bg-stone-200 rounded-xl overflow-hidden mb-6 flex items-center justify-center">
+            <img
+              src="/images/PRO-03.jpg"
+              alt="Sitting room with wood-burning stove at Little Slate House"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <h2 id="sitting-room-heading" class="text-2xl font-bold text-stone-900 mb-4">
+            Sitting room
+          </h2>
+          <div class="space-y-4 text-stone-700 leading-relaxed">
+            <p>
+              The sitting room is a good size for six people — comfortable sofas, a
+              large enough coffee table to put a board game on, and a Smart TV for the
+              evenings. The main feature is the wood-burning stove, which heats the
+              room properly on a cold evening and makes the house feel like a home
+              rather than a rental.
+            </p>
+            <p>
+              Logs are provided for your stay. We'll restock between stays but if you
+              run short mid-week, there are hardware shops and petrol stations in town
+              that sell logs and kindling.
+            </p>
+          </div>
+        </section>
+
+        <!-- Kitchen -->
+        <section aria-labelledby="kitchen-heading">
+          <div class="aspect-video bg-stone-200 rounded-xl overflow-hidden mb-6 flex items-center justify-center">
+            <img
+              src="/images/PRO-05.jpg"
+              alt="Kitchen at Little Slate House, fully equipped for self-catering"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <h2 id="kitchen-heading" class="text-2xl font-bold text-stone-900 mb-4">
+            Kitchen &amp; dining
+          </h2>
+          <div class="space-y-4 text-stone-700 leading-relaxed mb-6">
+            <p>
+              A proper kitchen — not an afterthought. Full oven and hob, dishwasher,
+              fridge-freezer, and a good set of pots, pans, and knives. The dining
+              area seats six comfortably.
+            </p>
+            <p>
+              Keswick has a Co-op on Main Street and a Booths a short drive away.
+              The Tuesday and Saturday market in Market Square sells local produce.
+            </p>
+          </div>
+          <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {amenities.kitchen.map((item) => (
+              <li class="flex items-center gap-2 text-sm text-stone-700">
+                <svg class="h-4 w-4 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <!-- Boot room -->
+        <section aria-labelledby="boot-room-heading">
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="aspect-square bg-stone-200 rounded-xl overflow-hidden flex items-center justify-center">
+              <img
+                src="/images/PRO-10.jpg"
+                alt="Boot room at Little Slate House with drying space"
+                class="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+            <div class="aspect-square bg-stone-200 rounded-xl overflow-hidden flex items-center justify-center">
+              <img
+                src="/images/PRO-02.jpg"
+                alt="Rear garden at Little Slate House"
+                class="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+          </div>
+          <h2 id="boot-room-heading" class="text-2xl font-bold text-stone-900 mb-4">
+            Boot room
+          </h2>
+          <div class="space-y-4 text-stone-700 leading-relaxed">
+            <p>
+              A proper boot room — separate from the rest of the house, with space
+              to leave six pairs of muddy boots and a full set of waterproofs. There's
+              a drying rail and enough hooks for a group's worth of jackets.
+            </p>
+            <p>
+              If you're walking seriously (Skiddaw, Blencathra, the Borrowdale round),
+              this is where you'll start and end each day.
+            </p>
+          </div>
+        </section>
+
+        <!-- Practical -->
+        <section aria-labelledby="practical-heading">
+          <h2 id="practical-heading" class="text-2xl font-bold text-stone-900 mb-6">
+            Practical details
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            <div>
+              <h3 class="font-semibold text-stone-900 mb-3">Living room</h3>
+              <ul class="space-y-2">
+                {amenities.livingRoom.map((item) => (
+                  <li class="flex items-center gap-2 text-sm text-stone-700">
+                    <svg class="h-4 w-4 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 class="font-semibold text-stone-900 mb-3">Practical</h3>
+              <ul class="space-y-2">
+                {amenities.practical.map((item) => (
+                  <li class="flex items-center gap-2 text-sm text-stone-700">
+                    <svg class="h-4 w-4 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p class="text-sm text-amber-800">
+              <strong>Wi-Fi:</strong> {amenities.wifi}
+            </p>
+          </div>
+        </section>
+      </div>
+
+      <!-- Sidebar -->
+      <aside class="space-y-6">
+        <!-- Quick facts card -->
+        <div class="bg-slate-800 text-white rounded-xl p-6 sticky top-24">
+          <h2 class="font-semibold text-lg mb-4">Quick facts</h2>
+          <dl class="space-y-3 text-sm">
+            {[
+              ['Type', 'Victorian self-catering cottage'],
+              ['Sleeps', '6 (maximum)'],
+              ['Bedrooms', '3'],
+              ['Location', 'Keswick town centre'],
+              ['High street', '2 min walk'],
+              ['Fitz Park', '1 min walk'],
+              ['Derwentwater', '12 min walk'],
+              ['Parking', amenities.parking],
+            ].map(([label, value]) => (
+              <div class="flex gap-2">
+                <dt class="text-slate-400 flex-shrink-0 w-28">{label}</dt>
+                <dd class={`text-white ${value?.includes('PLACEHOLDER') ? 'italic text-slate-400' : ''}`}>{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <div class="mt-6 pt-5 border-t border-slate-700">
+            <a
+              href="/availability/"
+              class="block w-full text-center px-4 py-3 bg-white text-slate-800 font-semibold rounded-md hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-800"
+            >
+              Enquire now
+            </a>
+          </div>
+        </div>
+
+        <!-- Gallery link -->
+        <div class="bg-stone-50 border border-stone-200 rounded-xl p-6">
+          <h3 class="font-semibold text-stone-900 mb-2">See more photos</h3>
+          <p class="text-sm text-stone-600 mb-4">Browse the full gallery for a closer look at every room.</p>
+          <a
+            href="/gallery/"
+            class="inline-flex items-center text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+          >
+            View gallery
+            <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="bg-stone-100 border-t border-stone-200 py-12">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-xl font-bold text-stone-900 mb-3">Sounds like the right fit?</h2>
+      <p class="text-stone-600 mb-6">Send us your dates and we'll confirm availability.</p>
+      <a
+        href="/availability/"
+        class="inline-flex items-center px-6 py-3 bg-slate-700 text-white font-semibold rounded-md hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+      >
+        Check dates &amp; enquire
+      </a>
+    </div>
+  </div>
+</Layout>

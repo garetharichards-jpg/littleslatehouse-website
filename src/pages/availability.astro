@@ -1,0 +1,140 @@
+---
+import Layout from '../layouts/Layout.astro';
+import EnquiryForm from '../components/EnquiryForm.astro';
+---
+
+<Layout
+  title="Availability &amp; Enquiry — Little Slate House, Keswick"
+  description="Check availability and enquire about Little Slate House, a three-bedroom self-catering cottage in Keswick, Lake District. Sleeps 6. Enquiry-led bookings."
+  canonicalPath="/availability/"
+>
+  <!-- Header -->
+  <div class="bg-slate-800 text-white py-16 sm:py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="text-slate-400 text-sm mb-6" aria-label="Breadcrumb">
+        <ol class="flex items-center gap-2">
+          <li><a href="/" class="hover:text-white transition-colors">Home</a></li>
+          <li aria-hidden="true">/</li>
+          <li class="text-slate-200" aria-current="page">Availability &amp; Enquiry</li>
+        </ol>
+      </nav>
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-4">Availability &amp; Enquiry</h1>
+      <p class="text-slate-300 text-lg max-w-xl">
+        Bookings are enquiry-led. Tell us your dates and party size and we'll
+        come back to you within 24 hours with availability and rates.
+      </p>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+
+      <!-- Enquiry form -->
+      <div class="lg:col-span-2">
+        <EnquiryForm />
+      </div>
+
+      <!-- Info sidebar -->
+      <aside class="space-y-6">
+
+        <!-- Availability calendar placeholder -->
+        <div class="bg-stone-50 border border-stone-200 rounded-xl p-6">
+          <h2 class="font-semibold text-stone-900 mb-3">Availability calendar</h2>
+          <div class="bg-stone-100 border-2 border-dashed border-stone-300 rounded-lg p-6 text-center">
+            <svg class="mx-auto mb-3 h-10 w-10 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p class="text-stone-500 text-sm font-medium mb-1">Calendar coming soon</p>
+            <p class="text-stone-400 text-xs leading-relaxed">
+              Live availability from The Travel Chapter iCal feed will appear here.
+              Until then, send an enquiry and we'll check dates for you.
+            </p>
+          </div>
+          <p class="text-xs text-stone-400 mt-3">
+            <strong>TODO (go-live):</strong> Embed iCal feed from The Travel Chapter
+            or connect a booking platform calendar.
+          </p>
+        </div>
+
+        <!-- How it works -->
+        <div class="bg-white border border-stone-200 rounded-xl p-6">
+          <h2 class="font-semibold text-stone-900 mb-4">How bookings work</h2>
+          <ol class="space-y-4">
+            {[
+              {
+                n: '1',
+                title: 'Send an enquiry',
+                desc: 'Fill in the form with your dates and party size.',
+              },
+              {
+                n: '2',
+                title: 'We check and reply',
+                desc: 'We\'ll confirm availability and quote you a rate within 24 hours.',
+              },
+              {
+                n: '3',
+                title: 'Confirm your booking',
+                desc: 'Agree the dates and we\'ll send booking details and payment information.',
+              },
+            ].map(({ n, title, desc }) => (
+              <li class="flex gap-4">
+                <div class="h-7 w-7 rounded-full bg-slate-700 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
+                  {n}
+                </div>
+                <div>
+                  <p class="font-medium text-stone-900 text-sm">{title}</p>
+                  <p class="text-stone-500 text-sm leading-relaxed">{desc}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <!-- Key facts -->
+        <div class="bg-stone-50 border border-stone-200 rounded-xl p-6">
+          <h2 class="font-semibold text-stone-900 mb-4">Key details</h2>
+          <dl class="space-y-3 text-sm">
+            {[
+              ['Sleeps', '6 maximum'],
+              ['Bedrooms', '3'],
+              ['Min stay', 'PLACEHOLDER — confirm with owner'],
+              ['Rates', 'PLACEHOLDER — contact for prices'],
+              ['Check in/out', 'PLACEHOLDER — confirm on booking'],
+              ['Pets', 'PLACEHOLDER — confirm with owner'],
+              ['Smoking', 'Not permitted'],
+            ].map(([label, value]) => (
+              <div class="flex gap-2">
+                <dt class="text-stone-500 flex-shrink-0 w-24">{label}</dt>
+                <dd class={`${String(value).includes('PLACEHOLDER') ? 'italic text-stone-400' : 'text-stone-800'}`}>
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p class="mt-4 text-xs text-stone-400">
+            Placeholder fields above will be confirmed and updated before go-live.
+          </p>
+        </div>
+
+        <!-- Social contact fallback -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 text-sm text-stone-700">
+          <h2 class="font-semibold text-stone-900 mb-2">Prefer to message directly?</h2>
+          <p class="mb-3 text-stone-600">
+            You can also reach us on Instagram or Facebook — we check both regularly.
+          </p>
+          <a
+            href="https://www.instagram.com/littleslatehouse"
+            class="inline-flex items-center gap-2 text-slate-700 hover:text-slate-900 font-medium transition-colors"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+            </svg>
+            @littleslatehouse on Instagram
+          </a>
+        </div>
+      </aside>
+    </div>
+  </div>
+</Layout>

@@ -1,0 +1,109 @@
+---
+import '../styles/global.css';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  ogImage?: string;
+  canonicalPath?: string;
+  schema?: object;
+}
+
+const {
+  title,
+  description,
+  ogImage = '/images/og-default.jpg',
+  canonicalPath = Astro.url.pathname,
+  schema,
+} = Astro.props;
+
+const siteUrl = 'https://www.littleslatehouse.co.uk';
+const canonical = `${siteUrl}${canonicalPath}`;
+const ogImageAbsolute = ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage}`;
+
+const defaultSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'VacationRental',
+  name: 'Little Slate House',
+  description:
+    'Three-bedroom Victorian self-catering cottage in Keswick town centre, Lake District. Sleeps 6.',
+  url: siteUrl,
+  image: ogImageAbsolute,
+  numberOfRooms: 3,
+  occupancy: {
+    '@type': 'QuantitativeValue',
+    maxValue: 6,
+  },
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: 'Keswick',
+    addressRegion: 'Cumbria',
+    addressCountry: 'GB',
+  },
+  amenityFeature: [
+    { '@type': 'LocationFeatureSpecification', name: 'WiFi', value: true },
+    { '@type': 'LocationFeatureSpecification', name: 'Fireplace', value: true },
+    { '@type': 'LocationFeatureSpecification', name: 'Kitchen', value: true },
+    { '@type': 'LocationFeatureSpecification', name: 'Washing machine', value: true },
+  ],
+  containedInPlace: {
+    '@type': 'City',
+    name: 'Keswick',
+    containedInPlace: {
+      '@type': 'State',
+      name: 'Cumbria',
+    },
+  },
+};
+
+const schemaData = schema ?? defaultSchema;
+---
+
+<!doctype html>
+<html lang="en-GB" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImageAbsolute} />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:site_name" content="Little Slate House" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageAbsolute} />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Schema.org structured data -->
+    <script type="application/ld+json" set:html={JSON.stringify(schemaData)} />
+
+    <!-- Analytics placeholder — uncomment and add script tag for Cloudflare Web Analytics or Plausible -->
+    <!-- TODO: Add analytics before go-live:
+         Cloudflare: <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "YOUR_TOKEN"}'></script>
+         Plausible:  <script defer data-domain="littleslatehouse.co.uk" src="https://plausible.io/js/script.js"></script>
+    -->
+  </head>
+  <body class="bg-stone-50 text-stone-900 font-sans antialiased">
+    <Nav />
+    <main>
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

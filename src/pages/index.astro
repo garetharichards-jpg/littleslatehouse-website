@@ -1,0 +1,330 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="Little Slate House — Self-catering in Keswick town centre, Lake District"
+  description="Three-bedroom Victorian cottage in the heart of Keswick. Sleeps 6. Two minutes from the high street, one from Fitz Park, with fell views. Self-catering in the Lake District."
+>
+  <!-- Hero -->
+  <section class="relative bg-slate-800 text-white overflow-hidden" aria-labelledby="hero-heading">
+    <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 opacity-90"></div>
+    <div
+      class="absolute inset-0 bg-cover bg-center opacity-30"
+      style="background-image: url('/images/PRO-01.jpg')"
+      role="img"
+      aria-label="Front of Little Slate House, a Victorian stone cottage in Keswick"
+    ></div>
+
+    <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40">
+      <div class="max-w-2xl">
+        <p class="text-slate-300 text-sm font-medium uppercase tracking-widest mb-4">
+          Keswick · Lake District · Cumbria
+        </p>
+        <h1 id="hero-heading" class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-6">
+          Little Slate House
+        </h1>
+        <p class="text-xl sm:text-2xl text-slate-200 font-light leading-relaxed mb-4">
+          Three bedrooms in the heart of town.
+        </p>
+        <p class="text-base sm:text-lg text-slate-300 leading-relaxed mb-10 max-w-xl">
+          A Victorian cottage two minutes from Market Square, one minute from Fitz Park,
+          and within easy reach of Derwentwater, Catbells, and the walks of Borrowdale.
+          Sleeps 6. No fuss.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <a
+            href="/availability/"
+            class="inline-flex items-center justify-center px-6 py-3 bg-white text-slate-800 font-semibold rounded-md hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-800"
+          >
+            Check dates &amp; enquire
+          </a>
+          <a
+            href="/the-house/"
+            class="inline-flex items-center justify-center px-6 py-3 border border-slate-400 text-white font-medium rounded-md hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-800"
+          >
+            About the house
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Key facts strip -->
+  <section class="bg-stone-100 border-y border-stone-200" aria-label="Key property facts">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <ul class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8 sm:justify-center text-sm text-stone-700">
+        <li class="flex items-center gap-2">
+          <svg class="h-5 w-5 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+          <span><strong class="text-stone-900">3 bedrooms</strong> &middot; sleeps 6</span>
+        </li>
+        <li class="hidden sm:block text-stone-300" aria-hidden="true">|</li>
+        <li class="flex items-center gap-2">
+          <svg class="h-5 w-5 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span>Keswick <strong class="text-stone-900">town centre</strong></span>
+        </li>
+        <li class="hidden sm:block text-stone-300" aria-hidden="true">|</li>
+        <li class="flex items-center gap-2">
+          <svg class="h-5 w-5 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span><strong class="text-stone-900">2 min</strong> high street &middot; <strong class="text-stone-900">1 min</strong> Fitz Park</span>
+        </li>
+        <li class="hidden sm:block text-stone-300" aria-hidden="true">|</li>
+        <li class="flex items-center gap-2">
+          <svg class="h-5 w-5 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+          <span>Fell views &middot; wood burner &middot; boot room</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- What is it -->
+  <section class="py-16 sm:py-20" aria-labelledby="about-heading">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div>
+          <h2 id="about-heading" class="text-3xl font-bold text-stone-900 mb-6">
+            A house made for the Lake District
+          </h2>
+          <div class="space-y-4 text-stone-700 leading-relaxed">
+            <p>
+              Little Slate House is a three-bedroom Victorian cottage on a quiet residential
+              street in Keswick — which means you step out of the front door and you're already
+              in town. Market Square and the Moot Hall are two minutes' walk. Fitz Park and
+              the River Greta are one.
+            </p>
+            <p>
+              The house sleeps six across three proper bedrooms: a king-size double, a double,
+              and a third room that can be made up as twin singles or pushed together as a
+              super-king. The sitting room has a wood-burning stove. There's a boot room with
+              drying space — an essential rather than a luxury when you're coming back from
+              Blencathra in November.
+            </p>
+            <p>
+              Derwentwater is twelve minutes' walk, the Keswick Launch boats leave from the
+              north shore, and the path to Catbells starts across the lake at Hawse End.
+              Latrigg is walkable from the edge of town. Borrowdale opens up four miles south.
+              The house makes a good base whether you're here for the fells, the lake, or simply
+              a few days in one of the better small towns in England.
+            </p>
+          </div>
+          <div class="mt-8 flex flex-col sm:flex-row gap-3">
+            <a
+              href="/the-house/"
+              class="inline-flex items-center justify-center px-5 py-2.5 bg-slate-700 text-white text-sm font-medium rounded-md hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+            >
+              See the house in detail
+            </a>
+            <a
+              href="/keswick/"
+              class="inline-flex items-center justify-center px-5 py-2.5 border border-stone-300 text-stone-700 text-sm font-medium rounded-md hover:bg-stone-50 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+            >
+              Keswick &amp; the area
+            </a>
+          </div>
+        </div>
+
+        <!-- Image grid -->
+        <div class="grid grid-cols-2 gap-3" aria-label="Photos of Little Slate House">
+          <div class="col-span-2">
+            <div class="aspect-video bg-stone-200 rounded-xl overflow-hidden relative flex items-center justify-center">
+              <img
+                src="/images/PRO-03.jpg"
+                alt="Sitting room with wood-burning stove at Little Slate House"
+                class="w-full h-full object-cover"
+                loading="lazy"
+              />
+              <div class="absolute inset-0 flex items-center justify-center bg-stone-200 rounded-xl flex-col gap-1 [&:has(+img)]:hidden" style="display:none;">
+                <span class="text-stone-400 text-xs font-mono">PRO-03.jpg</span>
+                <span class="text-stone-400 text-xs">Sitting room &middot; photo coming soon</span>
+              </div>
+            </div>
+          </div>
+          <div class="aspect-square bg-stone-200 rounded-xl overflow-hidden flex items-center justify-center">
+            <img
+              src="/images/PRO-07.jpg"
+              alt="Main bedroom at Little Slate House"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <div class="aspect-square bg-stone-200 rounded-xl overflow-hidden flex items-center justify-center">
+            <img
+              src="/images/FAM-01.jpg"
+              alt="Derwentwater from the Keswick shore"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feel of the place -->
+  <section class="bg-slate-800 text-white py-16 sm:py-20" aria-labelledby="feel-heading">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl mx-auto text-center">
+        <h2 id="feel-heading" class="text-3xl font-bold mb-6">
+          Why Keswick, and why this house
+        </h2>
+        <p class="text-slate-300 text-lg leading-relaxed mb-5">
+          People come to the Lake District and head straight for Windermere. Which is fine —
+          but Keswick sits at the foot of Skiddaw, right between Derwentwater and the northern
+          fells, with access to Borrowdale and Honister to the south and Blencathra to the east.
+          It's a proper walking town with a good butcher, a decent farmers' market, and enough
+          good cafes and pubs to make a rest day feel worthwhile.
+        </p>
+        <p class="text-slate-300 text-lg leading-relaxed mb-8">
+          The house is in town because we think being in town matters. You don't need a car
+          to get a coffee in the morning or walk to the lake after dinner. Castlerigg Stone
+          Circle is twenty minutes on foot. The walks start from the doorstep.
+        </p>
+        <a
+          href="/availability/"
+          class="inline-flex items-center px-6 py-3 bg-white text-slate-800 font-semibold rounded-md hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-800"
+        >
+          Enquire about your dates
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- At a glance -->
+  <section class="py-16 sm:py-20 bg-stone-50" aria-labelledby="highlights-heading">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 id="highlights-heading" class="text-2xl font-bold text-stone-900 mb-10 text-center">
+        At a glance
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl p-6 border border-stone-200">
+          <div class="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="h-5 w-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-stone-900 mb-2">Three bedrooms</h3>
+          <p class="text-sm text-stone-600 leading-relaxed">King double, double, and a twin/super-king. Sleeps up to 6.</p>
+        </div>
+        <div class="bg-white rounded-xl p-6 border border-stone-200">
+          <div class="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="h-5 w-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-stone-900 mb-2">Town centre</h3>
+          <p class="text-sm text-stone-600 leading-relaxed">Shops, cafes, and the lake all within ten minutes on foot.</p>
+        </div>
+        <div class="bg-white rounded-xl p-6 border border-stone-200">
+          <div class="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="h-5 w-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-stone-900 mb-2">Sleeps 6</h3>
+          <p class="text-sm text-stone-600 leading-relaxed">Comfortable for two families, a group of friends, or an extended family.</p>
+        </div>
+        <div class="bg-white rounded-xl p-6 border border-stone-200">
+          <div class="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="h-5 w-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-stone-900 mb-2">Wood burner</h3>
+          <p class="text-sm text-stone-600 leading-relaxed">A good sitting room with a working stove for autumn and winter stays.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Area teaser -->
+  <section class="py-16 sm:py-20" aria-labelledby="area-teaser-heading">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 id="area-teaser-heading" class="text-2xl font-bold text-stone-900 mb-3">
+        From the doorstep
+      </h2>
+      <p class="text-stone-600 mb-10 max-w-xl">
+        A few of the places you can reach easily from Keswick.
+      </p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <article>
+          <div class="aspect-video bg-stone-200 rounded-xl overflow-hidden mb-4 flex items-center justify-center">
+            <img
+              src="/images/FAM-02.jpg"
+              alt="Catbells ridge walk above Derwentwater"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <p class="text-xs text-stone-400 uppercase tracking-wider mb-1">4 miles from town</p>
+          <h3 class="font-semibold text-stone-900 mb-1">Catbells</h3>
+          <p class="text-sm text-stone-600 leading-relaxed">The classic Keswick ridge walk. Derwentwater below, Borrowdale beyond, Skiddaw behind you.</p>
+        </article>
+        <article>
+          <div class="aspect-video bg-stone-200 rounded-xl overflow-hidden mb-4 flex items-center justify-center">
+            <img
+              src="/images/FAM-01.jpg"
+              alt="Derwentwater from the Keswick shore"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <p class="text-xs text-stone-400 uppercase tracking-wider mb-1">10 min walk</p>
+          <h3 class="font-semibold text-stone-900 mb-1">Derwentwater</h3>
+          <p class="text-sm text-stone-600 leading-relaxed">Boat trips, shoreline walks, and the launch to Borrowdale on a good day.</p>
+        </article>
+        <article>
+          <div class="aspect-video bg-stone-200 rounded-xl overflow-hidden mb-4 flex items-center justify-center">
+            <img
+              src="/images/FAM-05.jpg"
+              alt="Castlerigg Stone Circle with fell panorama"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <p class="text-xs text-stone-400 uppercase tracking-wider mb-1">20 min walk</p>
+          <h3 class="font-semibold text-stone-900 mb-1">Castlerigg</h3>
+          <p class="text-sm text-stone-600 leading-relaxed">Neolithic stone circle on a fell-top platform with a 360-degree view of the surrounding summits.</p>
+        </article>
+      </div>
+      <div class="mt-8">
+        <a
+          href="/keswick/"
+          class="inline-flex items-center text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+        >
+          More about Keswick and the area
+          <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section class="bg-stone-100 border-t border-stone-200 py-14" aria-labelledby="cta-heading">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 id="cta-heading" class="text-2xl font-bold text-stone-900 mb-3">
+        Ready to plan your stay?
+      </h2>
+      <p class="text-stone-600 mb-6 max-w-lg mx-auto">
+        Send us your dates and we'll come back with availability and rates.
+        Bookings are enquiry-led — no instant-book pressure.
+      </p>
+      <a
+        href="/availability/"
+        class="inline-flex items-center px-6 py-3 bg-slate-700 text-white font-semibold rounded-md hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+      >
+        Check dates &amp; enquire
+      </a>
+    </div>
+  </section>
+</Layout>

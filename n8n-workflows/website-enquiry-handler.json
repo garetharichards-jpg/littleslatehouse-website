@@ -1,0 +1,121 @@
+{
+  "name": "Little Slate House — Website Enquiry Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "little-slate-house-enquiry",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Enquiry Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "little-slate-house-enquiry"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "honeypot-check",
+              "leftValue": "={{ $json.body.website }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "honeypot-filter",
+      "name": "Honeypot check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "sendTo": "PLACEHOLDER_OWNER_EMAIL",
+        "subject": "New enquiry — Little Slate House: {{ $json.body.arrival }} to {{ $json.body.departure }}",
+        "emailType": "html",
+        "message": "<h2>New enquiry for Little Slate House</h2>\n<table style='border-collapse:collapse;'>\n<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Name</td><td>{{ $json.body.name }}</td></tr>\n<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Email</td><td><a href='mailto:{{ $json.body.email }}'>{{ $json.body.email }}</a></td></tr>\n<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Arrival</td><td>{{ $json.body.arrival }}</td></tr>\n<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Departure</td><td>{{ $json.body.departure }}</td></tr>\n<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Party size</td><td>{{ $json.body.partySize }}</td></tr>\n<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Message</td><td>{{ $json.body.message }}</td></tr>\n</table>\n<p style='margin-top:16px;'><a href='mailto:{{ $json.body.email }}'>Reply to {{ $json.body.name }}</a></p>",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "Email notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [680, 240],
+      "notes": "Configure SMTP credentials in n8n Settings → Credentials before activating"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-ok",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 240]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": false, \"reason\": \"bot\" }",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-bot",
+      "name": "Respond (bot rejected)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 380]
+    }
+  ],
+  "connections": {
+    "Enquiry Webhook": {
+      "main": [
+        [{ "node": "Honeypot check", "type": "main", "index": 0 }]
+      ]
+    },
+    "Honeypot check": {
+      "main": [
+        [{ "node": "Email notification", "type": "main", "index": 0 }],
+        [{ "node": "Respond (bot rejected)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Email notification": {
+      "main": [
+        [{ "node": "Respond OK", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [{ "name": "website" }],
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "little-slate-house"
+  }
+}

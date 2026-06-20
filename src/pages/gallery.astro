@@ -1,0 +1,157 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { shots } from '../data/gallery.ts';
+
+const categories = ['all', 'exterior', 'interior', 'bedroom', 'kitchen', 'area'] as const;
+---
+
+<Layout
+  title="Gallery — Little Slate House, Keswick"
+  description="Photos of Little Slate House — a three-bedroom Victorian cottage in Keswick town centre, Lake District. Bedrooms, sitting room, kitchen, and the surrounding area."
+  canonicalPath="/gallery/"
+>
+  <!-- Header -->
+  <div class="bg-slate-800 text-white py-16 sm:py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="text-slate-400 text-sm mb-6" aria-label="Breadcrumb">
+        <ol class="flex items-center gap-2">
+          <li><a href="/" class="hover:text-white transition-colors">Home</a></li>
+          <li aria-hidden="true">/</li>
+          <li class="text-slate-200" aria-current="page">Gallery</li>
+        </ol>
+      </nav>
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-4">Gallery</h1>
+      <p class="text-slate-300 text-lg max-w-xl">
+        Photos of the house and the area. Professional photos from the October shoot
+        will replace the placeholders below — they'll drop straight in.
+      </p>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <!-- Filter tabs -->
+    <div class="flex flex-wrap gap-2 mb-10" role="group" aria-label="Filter photos by category">
+      {categories.map((cat) => (
+        <button
+          data-filter={cat}
+          class:list={[
+            'filter-btn px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2',
+            cat === 'all'
+              ? 'bg-slate-700 text-white'
+              : 'bg-stone-100 text-stone-600 hover:bg-stone-200',
+          ]}
+          aria-pressed={cat === 'all' ? 'true' : 'false'}
+        >
+          {cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+        </button>
+      ))}
+    </div>
+
+    <!-- Grid -->
+    <div
+      id="gallery-grid"
+      class="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4"
+      role="list"
+      aria-label="Photo gallery"
+    >
+      {shots.map((shot) => (
+        <div
+          class="gallery-item break-inside-avoid"
+          data-category={shot.category}
+          role="listitem"
+        >
+          <figure class="bg-stone-200 rounded-xl overflow-hidden group relative">
+            <div
+              class:list={[
+                'w-full flex items-center justify-center bg-stone-200',
+                shot.aspect === 'landscape' ? 'aspect-video' :
+                shot.aspect === 'portrait' ? 'aspect-[3/4]' : 'aspect-square',
+              ]}
+            >
+              <img
+                src={`/images/${shot.filename}`}
+                alt={shot.alt}
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                loading="lazy"
+                width="800"
+                height={shot.aspect === 'portrait' ? '1067' : shot.aspect === 'landscape' ? '450' : '800'}
+              />
+              <!-- Placeholder overlay shown when image is missing -->
+              <div class="placeholder-overlay absolute inset-0 flex flex-col items-center justify-center gap-2 bg-stone-200 opacity-0">
+                <span class="font-mono text-stone-500 text-sm">{shot.id}</span>
+                <span class="text-stone-400 text-xs text-center px-4">{shot.alt}</span>
+                <span class="text-stone-300 text-xs italic">Photo coming soon</span>
+              </div>
+            </div>
+            <figcaption class="px-4 py-3">
+              <p class="text-sm text-stone-700">{shot.caption}</p>
+              <p class="text-xs text-stone-400 font-mono mt-0.5">{shot.id}</p>
+            </figcaption>
+          </figure>
+        </div>
+      ))}
+    </div>
+
+    <!-- Placeholder note -->
+    <div class="mt-12 p-6 bg-amber-50 border border-amber-200 rounded-xl">
+      <h2 class="font-semibold text-amber-900 mb-2">About these photos</h2>
+      <p class="text-sm text-amber-800 leading-relaxed">
+        This gallery is set up and ready for real photos. Each image slot is labelled with
+        its Shot ID (e.g. PRO-03, FAM-01) which matches the shot catalogue and the Immich
+        photo library. To add a real photo, drop the file into
+        <code class="bg-amber-100 px-1 rounded font-mono text-xs">public/images/</code>
+        with the exact filename shown below each placeholder. No code changes needed.
+      </p>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="bg-stone-100 border-t border-stone-200 py-12">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-xl font-bold text-stone-900 mb-3">Like what you see?</h2>
+      <p class="text-stone-600 mb-6">Send us your dates and we'll confirm availability.</p>
+      <a
+        href="/availability/"
+        class="inline-flex items-center px-6 py-3 bg-slate-700 text-white font-semibold rounded-md hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+      >
+        Enquire now
+      </a>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  const filterBtns = document.querySelectorAll<HTMLButtonElement>('.filter-btn');
+  const items = document.querySelectorAll<HTMLElement>('.gallery-item');
+
+  filterBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const filter = btn.dataset.filter ?? 'all';
+
+      // Update button states
+      filterBtns.forEach((b) => {
+        const active = b.dataset.filter === filter;
+        b.classList.toggle('bg-slate-700', active);
+        b.classList.toggle('text-white', active);
+        b.classList.toggle('bg-stone-100', !active);
+        b.classList.toggle('text-stone-600', !active);
+        b.setAttribute('aria-pressed', String(active));
+      });
+
+      // Show/hide items
+      items.forEach((item) => {
+        const match = filter === 'all' || item.dataset.category === filter;
+        item.style.display = match ? '' : 'none';
+      });
+    });
+  });
+
+  // Show placeholder overlay when image fails to load
+  document.querySelectorAll<HTMLImageElement>('.gallery-item img').forEach((img) => {
+    const overlay = img.closest('figure')?.querySelector<HTMLElement>('.placeholder-overlay');
+    img.addEventListener('error', () => {
+      img.style.opacity = '0';
+      if (overlay) overlay.style.opacity = '1';
+    });
+  });
+</script>
