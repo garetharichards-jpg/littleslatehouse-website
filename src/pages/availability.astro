@@ -104,23 +104,19 @@ const waActive = !!property.whatsappNumber && property.whatsappNumber !== '__WHA
             {[
               ['Sleeps', '6 maximum'],
               ['Bedrooms', '3'],
-              ['Min stay', 'PLACEHOLDER — confirm with owner'],
-              ['Rates', 'PLACEHOLDER — contact for prices'],
-              ['Check in/out', 'PLACEHOLDER — confirm on booking'],
-              ['Pets', 'PLACEHOLDER — confirm with owner'],
+              ['Min stay', '7 nights (Sat–Sat)'],
+              ['Rates', 'Contact us for prices'],
+              ['Check in', '3pm'],
+              ['Check out', '10am'],
+              ['Pets', 'Sorry, no pets'],
               ['Smoking', 'Not permitted'],
             ].map(([label, value]) => (
               <div class="flex gap-2">
                 <dt class="text-stone-500 flex-shrink-0 w-24">{label}</dt>
-                <dd class={`${String(value).includes('PLACEHOLDER') ? 'italic text-stone-400' : 'text-stone-800'}`}>
-                  {value}
-                </dd>
+                <dd class="text-stone-800">{value}</dd>
               </div>
             ))}
           </dl>
-          <p class="mt-4 text-xs text-stone-400">
-            Placeholder fields above will be confirmed and updated before go-live.
-          </p>
         </div>
 
         <!-- Direct contact options -->

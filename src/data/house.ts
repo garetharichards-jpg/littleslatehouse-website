@@ -84,5 +84,5 @@ export const amenities = {
     'Private outdoor space',
   ],
   wifi: 'Fast broadband Wi-Fi throughout',
-  parking: 'PLACEHOLDER — confirm parking arrangement on go-live',
+  parking: 'On-street parking nearby',
 };
