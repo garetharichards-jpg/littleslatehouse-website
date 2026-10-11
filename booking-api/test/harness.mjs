@@ -23,6 +23,7 @@ export const BASE_BINDINGS = {
   GOOGLE_CLIENT_ID: 'gid', GOOGLE_CLIENT_SECRET: 'gsecret', GOOGLE_REFRESH_TOKEN: 'grefresh',
   GOOGLE_CALENDAR_ID: 'lsh-bookings@group.calendar.test',
   CAPTURE_MODE: 'automatic',
+  PUBLISH_MODE: 'google',
   TC_PROPERTY_CODE: '00000',
   PROPAGATION_SLA_HOURS: '26',
   EMAIL_ALLOWLIST: 'guest@test.invalid,mgmt@test.invalid,owner@test.invalid',

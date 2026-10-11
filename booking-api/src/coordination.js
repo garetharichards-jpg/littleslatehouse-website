@@ -1,7 +1,7 @@
 // Owner actions on the pending-change queue. Every release of dates requires a recorded acknowledgment
 // of the coordinated change with Travel Chapter (both systems changed within the same hour).
 
-import { bookingVars, getBooking, releaseNights, transition } from './bookings.js';
+import { bookingVars, getBooking, publishMode, releaseNights, transition } from './bookings.js';
 import { getChange, setChangeStatus } from './changes.js';
 import { sendEmail } from './email.js';
 import { withdrawBooking } from './google.js';
@@ -32,8 +32,10 @@ export async function completeChange(env, db, now, id, body, fetcher = fetch) {
   switch (c.kind) {
     case 'cancel_direct': {
       const b = await getBooking(db, c.booking_id);
-      const w = await withdrawBooking(env, c.booking_id, fetcher);
-      if (!w.ok) throw new HttpError(502, `could not remove the Google calendar block: ${w.reason}; nothing released`);
+      if (publishMode(env) === 'google' || b?.google_event_id) {
+        const w = await withdrawBooking(env, c.booking_id, fetcher);
+        if (!w.ok) throw new HttpError(502, `could not remove the Google calendar block: ${w.reason}; nothing released`);
+      }
       await releaseNights(db, c.booking_id);
       await transition(db, now, c.booking_id, 'cancelled', ", propagation = 'withdrawn'");
       // 'released' = done on our side; the reconciler marks it 'verified' once Travel Chapter's feed drops the block.

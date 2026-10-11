@@ -41,7 +41,7 @@ export function tcCancellationDraft(env, b) {
     `Property: Little Slate House (${code})`,
     `Owner booking dates (arrival – departure): ${b.arrival} – ${b.departure} (${b.nights} nights)`,
     b.agent_ref ? `Travel Chapter reference: ${b.agent_ref}` : 'Travel Chapter reference: (if any)',
-    'Requested change: cancel/release these owner-booked dates.',
+    'Requested change: cancel/release this owner booking and its blocked dates.',
     'Please propose a time so we can remove the block on both calendars within the same hour.',
   ].join('\n');
 }

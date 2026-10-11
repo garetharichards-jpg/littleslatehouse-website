@@ -311,6 +311,7 @@ export async function bookingVars(env, b, template) {
     amount: fmtGBP(b.amount_pence),
     management_contact: env.MANAGEMENT_CONTACT_TEXT || '',
     propagation: b.propagation,
+    next_step: nextStepText(env),
   };
   // The entry code exists only as a Worker secret and only for the welcome email.
   if (template === 'welcome' && env.ENTRY_CODE) vars.entry_code = env.ENTRY_CODE;
@@ -332,9 +333,30 @@ async function sendBookingConfirmedEmails(env, db, now, b, fetcher) {
   return out;
 }
 
-// Publish the block to the owner's Google calendar (idempotent) so Travel Chapter imports it.
+// How a direct booking reaches Travel Chapter.
+//  tc_portal (default): the owner enters it as an owner booking in the Travel Chapter portal, as done today;
+//                       the system waits for the block to appear in the agent feed.
+//  google:              the system writes it to the owner's dedicated Google calendar (which Travel Chapter
+//                       imports). Only switch on once Travel Chapter confirms this cannot duplicate owner bookings.
+export function publishMode(env) {
+  return env.PUBLISH_MODE === 'google' ? 'google' : 'tc_portal';
+}
+
+export function nextStepText(env) {
+  return publishMode(env) === 'google'
+    ? 'The dates have been published to the dedicated Google calendar; wait for Travel Chapter to show the block (up to 24h).'
+    : 'Enter these dates as an owner booking in the Travel Chapter owner portal now; the system will confirm when their feed shows the block.';
+}
+
 async function publish(env, db, now, b, fetcher) {
   if (PUBLISHED.includes(b.propagation)) return { ok: true, already: true };
+  if (publishMode(env) === 'tc_portal') {
+    // Start the propagation clock; the owner's portal entry is confirmed by the agent feed echo.
+    await db.prepare("UPDATE bookings SET published_at = ?, propagation = 'published', updated_at = ? WHERE id = ?")
+      .bind(iso(now), iso(now), b.id).run();
+    await audit(db, now, 'system', 'awaiting_tc_portal_entry', b.id);
+    return { ok: true, manual: true };
+  }
   const r = await publishBooking(env, b, fetcher);
   if (r.ok) {
     await db.prepare("UPDATE bookings SET google_event_id = ?, published_at = ?, propagation = 'published', updated_at = ? WHERE id = ?")

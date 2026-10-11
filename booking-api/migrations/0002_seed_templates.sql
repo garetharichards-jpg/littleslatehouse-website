@@ -34,10 +34,12 @@ Party size: {{party_size}}
  0, '2026-10-11T00:00:00Z'),
 ('owner_authorization',
  'Action needed: card authorised for {{booking_id}} ({{arrival_date}} to {{departure_date}})',
- '<p>A guest has authorised payment of {{amount}} for {{booking_id}}: {{arrival_date}} to {{departure_date}} ({{nights}} nights, {{party_size}} guests). Nothing has been charged yet.</p><p>Calendar propagation: {{propagation}}. Confirm the dates are blocked on Travel Chapter, then confirm the booking to capture payment. Card authorisations usually lapse after 7 days.</p>',
+ '<p>A guest has authorised payment of {{amount}} for {{booking_id}}: {{arrival_date}} to {{departure_date}} ({{nights}} nights, {{party_size}} guests). Nothing has been charged yet.</p><p>Next step: {{next_step}}</p><p>Once Travel Chapter shows the dates as blocked (or you have confirmed with them), confirm the booking to capture payment. Card authorisations usually lapse after 7 days.</p>',
  'A guest has authorised payment of {{amount}} for {{booking_id}}: {{arrival_date}} to {{departure_date}} ({{nights}} nights, {{party_size}} guests). Nothing has been charged yet.
 
-Calendar propagation: {{propagation}}. Confirm the dates are blocked on Travel Chapter, then confirm the booking to capture payment. Card authorisations usually lapse after 7 days.
+Next step: {{next_step}}
+
+Once Travel Chapter shows the dates as blocked (or you have confirmed with them), confirm the booking to capture payment. Card authorisations usually lapse after 7 days.
 ',
  1, '2026-10-11T00:00:00Z'),
 ('authorization_received',

@@ -20,7 +20,11 @@ Guest data, payment IDs, agent references, feed URLs, OAuth tokens and the entry
 | Source | `kind` | Role |
 |---|---|---|
 | Travel Chapter TABs feed (`ICAL_TC_URL` secret) | `agent` | Authoritative **blocking** input for agent reservations. |
-| Owner's dedicated Google calendar private iCal (`ICAL_OWNER_URL` secret) | `owner_publisher` | The feed Travel Chapter subscribes to. Direct bookings are written here via the Google Calendar API (`GOOGLE_*` secrets) with a stable event id per booking. Our own events are recognised by UID and never re-imported as conflicts. |
+| Owner's dedicated Google calendar private iCal (`ICAL_OWNER_URL` secret) | `owner_publisher` | The feed Travel Chapter was given. With `PUBLISH_MODE=google`, direct bookings are written here via the Google Calendar API (`GOOGLE_*` secrets) with a stable event id per booking; our own events are recognised by UID and never re-imported as conflicts. |
+
+**`PUBLISH_MODE`** decides how a direct booking reaches Travel Chapter:
+- `tc_portal` (**live default**, matches current practice): the owner enters it as an owner booking in the Travel Chapter portal. The "Action needed" email says so, and the system confirms when the agent feed shows the block. No Google writes.
+- `google`: the system publishes to the dedicated Google calendar. Switch this on only after Travel Chapter confirms that importing that feed cannot duplicate owner bookings they already hold. TEST uses `google` against a disposable calendar.
 
 Rules the code enforces:
 - **Fail closed.** A feed that errors, is blocked, returns zero events (agent feed) or is older than `CALENDAR_MAX_STALENESS_HOURS` makes availability **unknown**; quotes and Checkout are refused.
@@ -36,7 +40,7 @@ Rules the code enforces:
 
 1. Owner agrees dates and price, then `POST /admin/bookings` → **hold** (agent feed re-pulled; nights locked atomically; a DB trigger refuses nights under any unlinked external block). The response includes the guest's private pay link.
 2. Guest opens the pay link → feed re-pulled again → Stripe Checkout with `capture_method=manual`: the card is **authorised, not charged**.
-3. Webhook → **authorized** → block published to the Google calendar → owner gets an "Action needed" email.
+3. Webhook → **authorized** → owner gets an "Action needed" email. In `tc_portal` mode it says to enter the owner booking in the Travel Chapter portal; in `google` mode the block is published to the Google calendar.
 4. Travel Chapter's feed shows the block → `agent_confirmed`. If it doesn't, the owner checks with Travel Chapter.
 5. Owner `POST /admin/bookings/:id/confirm` (requires `agent_confirmed`, or `{"owner_verified_with_agent": true, "note": "..."}`; refused while an overlap is open) → funds **captured** → **confirmed** → guest confirmation + management notification.
 
@@ -77,7 +81,7 @@ Resend, with a unique dedupe key per message (also sent as Resend's `Idempotency
 ## Tests (local, no accounts needed)
 
 ```sh
-cd booking-api && npm ci && npm test            # 71 tests: Miniflare + in-memory D1; Stripe, Resend, Google and both feeds mocked
+cd booking-api && npm ci && npm test            # 72 tests: Miniflare + in-memory D1; Stripe, Resend, Google and both feeds mocked
 ./scripts/rollback-rehearsal.sh                  # D1 export → damage → restore, via wrangler local D1
 ./scripts/site-regression.sh                     # public site build must be byte-identical to main
 ```
@@ -116,7 +120,8 @@ Stripe (**test mode**) webhook endpoint `…/webhooks/stripe`, events:
 ## Live deployment (automation OFF) and the existing New Year booking
 
 Same steps without `--env test`, with `npm run backup:live` before every migration. Then reconcile the existing paid owner booking.
-It is already held by Travel Chapter as an owner booking, so it is **linked, not re-published**. Its welcome is already scheduled in Gmail, so it is recorded as handled elsewhere:
+It is already held by Travel Chapter as an owner booking, so it is **linked, not re-published**. Its welcome is already scheduled in Gmail, so it is recorded as handled elsewhere.
+Fill `imports/new-year.example.json` into a gitignored `imports/new-year.json`. Equivalent request:
 ```sh
 curl -X POST $API/admin/import -H "$H" -d '{
   "booking": {"guest_name":"…","guest_surname":"…","guest_email":"…","payer_name":"…",

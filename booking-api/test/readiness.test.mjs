@@ -122,3 +122,37 @@ describe('cleaner / management notifications', () => {
     } finally { await t.stop(); }
   });
 });
+
+describe('PUBLISH_MODE=tc_portal (live default): owner enters direct bookings in the Travel Chapter portal', () => {
+  test('authorise -> no Google write -> owner told to enter it in the portal -> agent feed echo confirms -> coordinated cancel without Google', async () => {
+    const t = await start({ CAPTURE_MODE: 'manual', PUBLISH_MODE: 'tc_portal' });
+    try {
+      await ready(t);
+      const { booking: b } = await holdAndCheckout(t, { arrival: '2027-09-10', departure: '2027-09-14' });
+      const r = await t.webhook(sessionEvent('checkout.session.completed', b, {
+        id: 'cs_test_1', payment_status: 'unpaid', payment_intent: 'pi_p', metadata: { booking_id: b.id, capture_mode: 'manual' },
+      }));
+      assert.equal(r.data.result.action, 'authorized');
+      assert.equal(t.world.google.size, 0, 'nothing written to Google');
+      assert.equal(t.world.calls.filter((c) => c.url.includes('googleapis.com/calendar')).length, 0);
+      const owner = t.emails().find((e) => /Action needed/.test(e.subject));
+      assert.match(owner.text, /owner booking in the Travel Chapter owner portal/);
+
+      let d = await t.admin('POST', '/admin/run', { job: 'daily' });
+      assert.ok(d.data.issues.some((i) => /entered as an owner booking in the Travel Chapter portal\?/.test(i)));
+
+      // Owner enters it in the portal; the agent feed now shows the block.
+      t.world.tc = ics([{ uid: 'tc-2027-06-01-0@tabs.test', start: '2027-06-01', end: '2027-06-03' }, { uid: 'owner-entry@tabs.test', start: b.arrival, end: b.departure }]);
+      await t.admin('POST', '/admin/run', { job: 'hourly' });
+      assert.equal((await t.admin('GET', `/admin/bookings/${b.id}`)).data.booking.propagation, 'agent_confirmed');
+      assert.equal((await t.admin('POST', `/admin/bookings/${b.id}/confirm`, {})).data.action, 'confirmed');
+
+      await t.admin('POST', `/admin/bookings/${b.id}/cancel`, { reason: 'test' });
+      const ch = (await t.admin('GET', '/admin/changes')).data.find((c) => c.kind === 'cancel_direct');
+      assert.match(ch.draft_message, /cancel\/release this owner booking/);
+      const done = await t.admin('POST', `/admin/changes/${ch.id}/complete`, { acknowledgment: 'cancelled in portal with agent, same hour' });
+      assert.equal(done.data.change.status, 'released');
+      assert.equal(t.world.calls.filter((c) => c.url.includes('googleapis.com/calendar')).length, 0, 'still no Google calls');
+    } finally { await t.stop(); }
+  });
+});

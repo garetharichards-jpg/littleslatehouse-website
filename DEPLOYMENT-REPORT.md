@@ -1,9 +1,9 @@
 # Little Slate House — Deployment Readiness Report
 
-Updated: 2026-10-11 (verified handoff) · Branch: `ccr-175a0349-1giy42`
+Updated: 2026-10-11 (verified handoff + owner records audit) · Branch: `ccr-175a0349-1giy42`
 
 **Verdict: ready for a TEST deployment once access is granted; NOT ready for production automation.**
-Code and tests are complete locally (71/71 passing, rollback rehearsal passing, public site build byte-identical to `main`).
+Code and tests are complete locally (72/72 passing, rollback rehearsal passing, public site build byte-identical to `main`).
 Nothing is deployed yet. This session has no Cloudflare API access, no Gmail access and no write access to Google Calendar.
 Production is untouched: no live charge, refund, confirmation, calendar write or deletion, and no customer email.
 
@@ -22,8 +22,12 @@ This repo is public. Guest names, contact addresses, booking references, payment
 | Stripe | Connector reaches the "Little Slate House" account in **test mode only** (no live access from here). No test webhook endpoints. | Stripe connector |
 | Resend | Domain `littleslatehouse.co.uk` status **failed** (all three records). 0 webhooks. | Resend connector |
 | Feed URL exposure | No Google or Travel Chapter feed URLs anywhere in the repo or its git history | `git log --all -p` scan |
-| Booking Desk ChatGPT Site | **Not reachable** from this environment (DNS blocked by sandbox). Source, schema, records and templates not obtained. | curl / WebFetch |
-| Gmail | **No Gmail connector in this session.** Feed URLs, welcome wording and drafts could not be read or edited. | Connector list |
+| Booking Desk ChatGPT Site | A **test-mode prototype**: the Site states that charges, refunds and emails never leave the app, and uses a simulated UK clock. No source, database, template or export option was found. It holds only **two fictional records**, which must not be imported. It has no production Stripe, Resend, calendar or persistence. | Owner's ChatGPT audit (Part A); not reachable from this sandbox |
+| Booking ledger | 13 stays from Aug 2026 identified from Gmail: 9 agent bookings, 3 direct/owner bookings (2 past, New Year upcoming) and 1 **proposed** owner hold for Apr 2027 (acceptance and payment not found). Agent amounts are **owner income**, not guest price. The ledger is *not* a complete portal export. Details are kept out of this repo. | Owner's ChatGPT audit |
+| How direct bookings reach Travel Chapter today | The owner enters them as **owner bookings in the Travel Chapter portal**; each has a Travel Chapter reference. None came through the Google feed. | Owner's ChatGPT audit |
+| Two-way iCal completion | **Not confirmed in either direction** (no confirmation email from owner or Travel Chapter). Destination calendar of the inbound Travel Chapter feed: not found. | Owner's ChatGPT audit |
+| Policies | Direct: full upfront; check-in from 3pm (agent guests 5pm); checkout 10am; cleaners from 10am, so same-day turnover. Discounts: 10% direct / 12% returning are documented, but eligibility detail, stacking and an approved algorithm are **not**. Minimum stay: not found. Direct damage deposit: none approved. | Owner's ChatGPT audit, with source emails |
+| Gmail | No Gmail connector in this session. Feed URLs and the welcome wording must be copied into secrets by the owner. | Connector list |
 
 ## 2. Implemented and working (locally)
 
@@ -31,7 +35,8 @@ This repo is public. Guest names, contact addresses, booking references, payment
 
 - **Availability:**
   - The Travel Chapter feed is an authoritative blocking input.
-  - The owner's dedicated Google calendar is the publisher feed, with one stable event per direct booking.
+  - **`PUBLISH_MODE=tc_portal` (live default):** the owner enters each direct booking in the Travel Chapter portal, as done today. The system tells them to, then confirms when the agent feed shows the block. **No Google writes**, so no duplicate owner bookings in TABs.
+  - `PUBLISH_MODE=google` (TEST, or later once Travel Chapter confirms no duplicates): one stable event per direct booking on the dedicated Google calendar.
   - Echoes of our own bookings are linked as confirmation, not treated as conflicts.
   - Disappearing blocks are never released automatically. Ghosts and amendments are flagged.
   - Fail-closed on missing, empty or stale feeds. The agent feed is re-pulled before every quote and every Checkout.
@@ -50,7 +55,7 @@ This repo is public. Guest names, contact addresses, booking references, payment
 - **Operations:** cron every 30 minutes for feeds and retries; daily reconciler and owner alert; D1 backup and restore; kill switch.
 - **Site safety:** Tailwind v4 was scanning `booking-api/` and adding one unused CSS rule to the public site. One line in `src/styles/global.css` (`@source not "../../booking-api";`) restores a byte-identical site build.
 
-## 3. Tests: 71 passed, 0 failed (+ rollback rehearsal PASS, site regression PASS)
+## 3. Tests: 72 passed, 0 failed (+ rollback rehearsal PASS, site regression PASS)
 
 Full output: `booking-api/TEST-EVIDENCE.txt`. All runs are local (Miniflare/workerd, in-memory D1) with Stripe, Resend, Google Calendar and both feeds **mocked**, using fictional data.
 
@@ -58,7 +63,7 @@ Full output: `booking-api/TEST-EVIDENCE.txt`. All runs are local (Miniflare/work
 |---|---|---|---|
 | 1 | Enquiry and price validation | agreed total required; party size ≤ 6; unapproved discount refused; approved rule must match exactly | PASS |
 | 2 | Agent and direct conflicts | agent booking blocks quote; concurrent holds (1 of 10 wins); overlap race before Checkout and after authorisation; back-to-back allowed | PASS |
-| 3 | Google write and publishing | one stable event per booking, no guest data; own events recognised; Google outage → nothing released | PASS (mocked) |
+| 3 | Google write and publishing | one stable event per booking, no guest data; own events recognised; Google outage → nothing released; `tc_portal` mode makes no Google calls and tells the owner to use the portal | PASS (mocked) |
 | 4 | Travel Chapter feed and 24h delay | pending at 23h, overdue alert at 27h, cleared on echo; stale/empty/failed feeds fail closed; London timezone conversion | PASS (mocked) |
 | 5 | Amendments, cancellations, ghosts | missing → still blocked; transient omission; ghost (same/new UID); amendment keeps old dates; coordinated cancel → verified | PASS |
 | 6 | Stripe TEST Checkout, signatures, replay | manual capture; bad/stale signatures rejected; exact replay = duplicate; crash → retry once; owner capture idempotent | PASS (mocked) |
@@ -110,11 +115,14 @@ Scoped token (Cloudflare dashboard → My Profile → API Tokens → Create cust
 1. **New Year welcome date:** Gmail has it scheduled for **27 Dec**; the saved policy implies **28 Dec**. Keep, move, or cancel and let the system send it? Until you decide, the system will **not** send any welcome for this booking and will keep flagging it.
 2. **New Year confirmation:** no post-payment confirmation was found as sent. Send one manually, or none? The system will not generate one.
 3. **New Year management notice:** was cleaning or management already told about 30 Dec–3 Jan? This decides whether the import marks it historical.
-4. **Existing bookings not on the dedicated calendar:** the 12 Gmail-detected stays include agent and owner bookings. Should the owner's *direct* bookings be added to the dedicated calendar? Do this only after Travel Chapter answers the duplicate question (§6), because publishing them could create duplicate owner bookings in TABs.
-5. **Discount rules:** approve exact rules (e.g. `{"direct10":10,"returning12":12}`) and eligibility, or keep discounts manual.
+4. **Publishing route:** keep `PUBLISH_MODE=tc_portal` (enter direct bookings in the Travel Chapter portal, as now), or switch to `google` after Travel Chapter answers the duplicate question. Until then, do **not** back-fill existing owner bookings into the dedicated Google calendar; they are already in TABs.
+5. **Discount rules:** approve exact rules (e.g. `{"direct10":10,"returning12":12}`), who counts as "returning", and whether rules can combine (the system applies at most one rule per booking). Otherwise keep discounts manual.
 6. **Direct damage deposit:** remains disabled. Approve a policy separately if wanted.
 7. **Draft templates:** approve or replace `confirmation`, `management_new_booking`, `management_cancellation`, `authorization_received`.
 8. **Go-live operating model:** authorise-then-capture after Travel Chapter confirms (recommended until real-time cross-channel confirmation exists).
+9. **April 2027 owner hold:** acceptance and payment of the revised offer were not found. It stays **only** as a Travel Chapter block, not as a confirmed direct booking. Confirm its status before anything else is done with it.
+10. **Minimum stay:** none found. The system enforces none, and the owner quotes each stay.
+11. **Booking Desk:** retire it as a test prototype. No data in it needs migrating.
 
 ## 6. Blocked by missing access (with owner action)
 
@@ -125,15 +133,25 @@ Scoped token (Cloudflare dashboard → My Profile → API Tokens → Create cust
 | Resend domain verification | add the §7 DNS records (token with DNS Edit, or by hand), then Verify |
 | Feed URLs, welcome wording, Travel Chapter and management drafts | no Gmail connector; owner copies URLs into secrets and exports the welcome |
 | Google write + disposable test calendar | owner OAuth (§4B) and owner-created test calendar (§4C) |
-| Booking Desk export | owner uses the Site's own export, if it has one, and shares it privately. If none exists, see below. |
 | Travel Chapter confirmation | owner sends the existing draft (see below) |
 
-**Booking Desk: reuse vs. new.** Without the export, nothing from the Booking Desk is reused in code. The welcome template is reused as content once exported. Records are re-entered through the dry-run import. Workflow, schema and logic are a new implementation in `booking-api/` and cover holds, payments, calendars, notifications and the welcome email. If the export arrives, compare its records with the import list and its templates with the seeded drafts.
+**Booking Desk: reuse vs. new (now settled).** The Site is a test-mode prototype with no exportable source, database or templates, and only fictional records.
+
+| Kind | Items | Handling |
+|---|---|---|
+| Content reused | Welcome wording (from the Gmail versions); payment-link and checkout-reminder wording as reference | Owner to supply or approve templates |
+| Records reused | Real bookings come from Gmail and the Travel Chapter portal, not the Site | **New Year** is imported via `booking-api/imports/new-year.example.json`. Agent bookings and the April hold stay as Travel Chapter blocks (annotate refs after the first sync). Past stays are not imported. |
+| New implementation | Workflow, schema, payments, calendars, notifications, scheduling | `booking-api/` |
+
+Gap noted from history: a checkout reminder was once sent on the arrival day by mistake. There is no automated checkout-reminder template yet. If you want one, it would be timed from the departure date and approved like the others.
 
 **Question to add to the existing draft to Travel Chapter** (owner to add and send; not sent by me):
 > "If our dedicated Google Calendar sends a blocked date into TABs, could that create a duplicate owner booking when the same reservation is already registered in your system?"
 
-Also ask Travel Chapter to confirm whether the owner Google feed has been added on their side (two-way sync complete) and how to test safely. Drafts to Travel Chapter and to management stay unsent until you approve.
+The existing draft to Travel Chapter already asks whether two-way sync is complete and how to test safely. Add the question above, plus:
+> "Could you also confirm which calendar your TABs feed should be imported into on our side, and whether owner bookings we enter in the portal will continue to be the preferred route for direct bookings?"
+
+The draft to management already asks for their preferred notification address. Both drafts stay unsent until you approve.
 
 ## 7. DNS records still to add (Resend; DNS-only / grey cloud; keep all existing records)
 
@@ -156,8 +174,9 @@ Also ask Travel Chapter to confirm whether the owner Google feed has been added 
    - Then: cancellation through the change queue, a declined card (`4000 0000 0000 0002`), webhook replay from the Stripe dashboard, and a mocked-clock welcome run.
 4. **LIVE with automation OFF:**
    - `wrangler d1 create lsh-booking`, `npm run backup:live` (empty), migrate, deploy with `AUTOMATION_ENABLED=false`, `STRIPE_MODE=test`, `PAYMENT_POLICY` empty.
-   - Register the real feeds (read-only pull). Compare `/admin/external-blocks` with the Travel Chapter owner portal and the Gmail-detected stays. Attach agent refs.
-5. **Reconcile New Year:** dry-run import (linked to the agent block, payment reconciled, welcome marked as handled in Gmail), review, then `apply`.
+   - Keep `PUBLISH_MODE=tc_portal`.
+   - Register the real feeds (read-only pull). Compare `/admin/external-blocks` with the Travel Chapter owner portal and the private ledger: every agent stay, the New Year owner booking and the April hold must appear as blocks. Attach agent refs.
+5. **Reconcile New Year:** fill `imports/new-year.example.json` into a gitignored `imports/new-year.json`. Dry-run import (linked to the agent block, payment reconciled, welcome marked as handled in Gmail, prior correspondence audited), review, then `apply`.
 6. **Only after Travel Chapter's answer and your written approval:** live Stripe keys + live webhook, `STRIPE_MODE=live`, `PAYMENT_POLICY=full_upfront`, `AUTOMATION_ENABLED=true`, keeping `CAPTURE_MODE=manual`.
 
 ## 9. Rollback

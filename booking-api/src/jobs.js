@@ -2,7 +2,7 @@
 // Hourly: expire unpublished holds, pull both feeds, propagation watch, retry email.
 // Daily:  + welcome emails, full cross-channel reconciliation, owner alert.
 
-import { bookingVars, expireHolds, getBooking } from './bookings.js';
+import { bookingVars, expireHolds, getBooking, publishMode } from './bookings.js';
 import { calendarStatus, syncAll } from './calendar.js';
 import { openChange, setChangeStatus } from './changes.js';
 import { retryFailed, sendEmail } from './email.js';
@@ -102,9 +102,13 @@ export async function reconcile(env, db, now, fetcher = fetch) {
   ).bind(today).all();
   for (const b of active) {
     if (b.propagation === 'publish_failed') issues.push(`Booking ${b.id} could not be published to the Google calendar: Travel Chapter cannot see it`);
-    if (b.propagation === 'published') issues.push(`Booking ${b.id}: waiting for Travel Chapter to import the block (published ${hoursSince(b.published_at)}h ago; can take 24h)`);
+    if (b.propagation === 'published') {
+      issues.push(publishMode(env) === 'google'
+        ? `Booking ${b.id}: waiting for Travel Chapter to import the block (published ${hoursSince(b.published_at)}h ago; can take 24h)`
+        : `Booking ${b.id}: waiting for the Travel Chapter feed to show it (${hoursSince(b.published_at)}h) — has it been entered as an owner booking in the Travel Chapter portal?`);
+    }
     if (b.propagation === 'overdue') issues.push(`Booking ${b.id}: Travel Chapter has NOT shown the block ${hoursSince(b.published_at)}h after publishing`);
-    if (['published', 'agent_confirmed', 'overdue'].includes(b.propagation) && b.status !== 'cancellation_pending') {
+    if (b.google_event_id && b.status !== 'cancellation_pending') {
       const exists = await eventExists(env, b.id, fetcher);
       if (exists === false) issues.push(`Booking ${b.id}: its block is missing from the Google calendar`);
     }
