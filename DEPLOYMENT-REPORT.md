@@ -49,3 +49,43 @@ Status: **BLOCKED — no deployment or code changes made. Production untouched.*
 ## 6. Outstanding
 
 Everything in section 4. No action will be taken on real payments, guest emails or refunds without your explicit approval.
+
+---
+
+## Addendum — 2026-10-11 handoff follow-up (still BLOCKED)
+
+Guest, payment and contact details from the handoff are deliberately NOT recorded here (public repo). Keep them in protected config / the D1 database only.
+
+### Re-checked from this session (read-only)
+| Target | Result |
+|---|---|
+| Booking Desk ChatGPT Site | Unreachable: egress proxy denies the host. Source cannot be inspected or exported from here. **Action: owner to use the Site's native export and supply it privately (not via this repo).** |
+| www.littleslatehouse.co.uk, `*.pages.dev` | Unreachable (same). Actual linked Pages project (`littleslatehouse-website` vs `little-slate-house`) **unverified**. |
+| Cloudflare / Stripe / Resend APIs | Unreachable; no tokens or Wrangler login present. |
+| Repo | Unchanged: static Astro site only. No Booking Desk code, so nothing to reuse yet. |
+
+### Access blockers (owner actions)
+1. Add to environment allowed domains: `api.cloudflare.com`, `api.stripe.com`, `api.resend.com`, `little-slate-booking-desk.garetharichards.chatgpt.site`, `www.littleslatehouse.co.uk`, `*.pages.dev`.
+2. Provide as environment secrets (never in chat/repo): Cloudflare API token (Pages read, Workers/D1 edit, DNS read), Stripe TEST secret + test webhook secret, Resend API key, entry code (as a Worker secret only).
+3. Provide the ChatGPT Site export, and the authoritative blocked-date source (see below).
+
+### Decisions needed from owner (not invented)
+- Payment policy: full upfront vs the *proposed, unapproved* 25% deposit / 6-week balance.
+- Security-damage deposit and refund policy (refunds stay disabled regardless).
+- Which calendar is authoritative. An empty/blocked iCal feed will be treated as **unknown, not available**: the Worker fails closed (no hold granted) and alerts management.
+
+### Resend DNS (domain currently FAILED) — exact records to fix
+Add in Cloudflare DNS, **DNS-only (grey cloud)**, preserving all existing records:
+- `TXT  resend._domainkey` → full DKIM public key copied from the Resend dashboard (current record failed; likely truncated/split incorrectly)
+- `CNAME rsend` → `rsend-apne1.forge.rmta.net`
+- `CNAME send` → `send.forge.rmta.net`
+Then click Verify in Resend. Confirm exact values in the dashboard, as Resend may show different ones for your region.
+
+### Reconciliation of the live payment (planned, not executed)
+Link the existing successful PaymentIntent to the booking by writing a D1 `payments` row with `source='reconciled'` and `confirmation_sent=1` (suppresses any email), only after the booking is confirmed authoritative. No charge, refund or Stripe write; metadata on the PaymentIntent is left unchanged. Dry-run diff first, `--apply` after owner sign-off. Also check legacy v1 webhook endpoints in Stripe (v2 destinations are empty).
+
+### Planned build (once unblocked)
+Separate Worker + D1 (`lsh-booking-api`), cloned TEST environment with Stripe test keys, recipient allow-list, injectable clock for the +2-day welcome trigger, signature/duplicate/retry webhook tests, concurrent-hold tests, calendar-failure tests, refunds disabled in code, daily maintenance checks, D1 export before each migration, `AUTOMATION_ENABLED=false` in live. Test URL, evidence table and pass/fail results will be added here; **none exist yet**.
+
+### Launch / rollback (unchanged)
+Launch only on written owner approval: secrets → migrations → deploy → flip `AUTOMATION_ENABLED`. Rollback: flag off → `wrangler rollback` → restore D1 export; Pages deployment untouched.
