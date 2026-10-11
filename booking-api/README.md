@@ -89,6 +89,18 @@ The latest output is in `TEST-EVIDENCE.txt`.
 
 ## Deployment (TEST first)
 
+**One command:** with the environment variables set and the hosts allowed, run `node scripts/deploy-test.mjs --check` (offline: names present/missing, safety checks), then `node scripts/deploy-test.mjs`. The script:
+- creates or reuses the `lsh-booking-test` D1, applies migrations and deploys `lsh-booking-api-test`;
+- pushes secrets from the environment on stdin, never printing them;
+- uses a fake entrance code in TEST and routes management mail to your own test inbox;
+- refuses live Stripe keys and the real Google calendar or feed;
+- (re)creates the Stripe **test** webhook endpoint and stores its secret;
+- registers the feeds, loads the welcome template (unapproved if incomplete), runs a first sync and prints status.
+
+The admin token is kept in `.admin-token.test` (gitignored).
+
+Manual equivalent:
+
 Needs a Cloudflare API token for the account that owns `littleslatehouse.co.uk` (Workers Scripts edit, D1 edit, Pages read, DNS read).
 
 ```sh

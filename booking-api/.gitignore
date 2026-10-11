@@ -5,3 +5,4 @@ backups/*.sql
 dist/
 imports/*.json
 !imports/*.example.json
+.admin-token.*
