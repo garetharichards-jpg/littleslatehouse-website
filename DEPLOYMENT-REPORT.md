@@ -94,3 +94,21 @@ Then click **Verify** in Resend. Confirm the values against the dashboard, which
 **Launch order (each step reversible):** deploy TEST → Stripe test-mode round trip + allow-listed email → deploy LIVE with automation OFF → import and reconcile the New Year booking (dry run, then apply) → owner approves templates and policy → **only on explicit written approval**: live Stripe keys, `STRIPE_MODE=live`, `PAYMENT_POLICY=full_upfront`, `AUTOMATION_ENABLED=true`.
 
 **Rollback:** flip `AUTOMATION_ENABLED=false` (immediate stop) → `wrangler rollback` (Worker code) → D1 Time Travel or `backups/*.sql` restore (data) → `wrangler delete` (remove entirely). The Pages site and its deployments are independent and unaffected throughout.
+
+## 9. Connector check (2026-10-11, read-only)
+
+| Connector | Result |
+|---|---|
+| Cloudflare Developer Platform | Connected. The account it sees has **0 Workers and 0 D1 databases**. The connector has **no tools for Pages, DNS, Worker upload or secrets**, so it can't confirm the live Pages project, fix DNS, or deploy. Either this is a different account from the one hosting the site, or it simply can't see Pages. |
+| Stripe | Connected to "Little Slate House", **test mode only** (no live access). Safe for test Checkout. The live £900 payment cannot be read from here, which is fine: nothing needs to touch it. Test-mode webhook endpoints: none. |
+| Resend | Connected. Domain `littleslatehouse.co.uk` (region ap-northeast-1) is still **failed** on all three records. Resend webhooks: none. |
+
+Exact Resend records (from the Resend API), all DNS-only in Cloudflare:
+
+| Type | Name | Value |
+|---|---|---|
+| TXT | `resend._domainkey` | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDBKgcXPu++bR/MpPggZ2508MLJ2VoCt6LKfyPWvkqrBB9RtFmaazYJ9ix/SIL9WHIPoz7pMfmet/8MJsnFNz4E0bDXkujpAcLbla3Bx6iRIfFK1gVY98X3KqB8yTjw013GvU3fe9fF1Z2oqe4JshpIF99vXhR/QB5PLVe0pGrzCwIDAQAB` |
+| CNAME | `rsend` | `rsend-apne1.forge.rmta.net` |
+| CNAME | `send` | `send.forge.rmta.net` |
+
+**Still needed to deploy:** a Cloudflare API token for the account that owns `littleslatehouse.co.uk` (Workers Scripts edit, D1 edit, Pages read, DNS read), added as an environment secret `CLOUDFLARE_API_TOKEN` with `api.cloudflare.com` allowed. Wrangler can then deploy the TEST Worker.
