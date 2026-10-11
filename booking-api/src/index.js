@@ -2,13 +2,14 @@
 // Production safety: AUTOMATION_ENABLED=false blocks live payments and all non-allow-listed email.
 
 import {
-  cancelBooking, checkoutForPayLink, createHold, getBooking, importBooking,
+  cancelBooking, checkoutForPayLink, confirmAuthorized, createHold, getBooking, importBooking,
 } from './bookings.js';
-import { availability, calendarStatus, exportIcal } from './calendar.js';
+import { availability, calendarStatus } from './calendar.js';
+import { completeChange, coordinateChange } from './coordination.js';
 import { daily, hourly } from './jobs.js';
 import { handleStripeWebhook } from './stripe.js';
 import {
-  HttpError, automationEnabled, isAdmin, iso, json, nowFrom, timingSafeEqual,
+  HttpError, automationEnabled, isAdmin, iso, json, nowFrom,
 } from './util.js';
 
 function cors(env, request) {
@@ -48,12 +49,6 @@ async function route(request, env) {
     return json(r.body, r.status);
   }
 
-  if (m === 'GET' && p === '/calendar.ics') {
-    const t = url.searchParams.get('t') || '';
-    if (!env.ICAL_EXPORT_TOKEN || !timingSafeEqual(t, env.ICAL_EXPORT_TOKEN)) throw new HttpError(404, 'not found');
-    return new Response(await exportIcal(db), { headers: { 'content-type': 'text/calendar; charset=utf-8' } });
-  }
-
   // ---- Admin (Bearer ADMIN_TOKEN) ----
   if (p.startsWith('/admin/')) {
     if (!isAdmin(request, env)) throw new HttpError(401, 'unauthorised');
@@ -66,12 +61,34 @@ async function route(request, env) {
         automation_enabled: automationEnabled(env),
         stripe_mode: env.STRIPE_MODE,
         payment_policy: env.PAYMENT_POLICY || null,
+        capture_mode: env.CAPTURE_MODE === 'automatic' ? 'automatic' : 'manual',
         calendar: await calendarStatus(env, db, now),
         bookings: counts.results,
         emails: emails.results,
       });
     }
     if (m === 'POST' && p === '/admin/bookings') return json(await createHold(env, db, now, await readJson(request)), 201);
+    if (m === 'GET' && p === '/admin/changes') {
+      const { results } = await db.prepare(
+        "SELECT * FROM pending_changes WHERE status IN ('open','coordinated','released') ORDER BY created_at",
+      ).all();
+      return json(results);
+    }
+    if (m === 'GET' && p === '/admin/external-blocks') {
+      const { results } = await db.prepare(
+        `SELECT source_id, uid, start_date, end_date, summary, state, linked_booking_id, agent_ref, first_seen_at, last_seen_at, missing_since
+         FROM ical_events WHERE end_date >= ? ORDER BY start_date`,
+      ).bind(url.searchParams.get('from') || '0000-01-01').all();
+      return json(results);
+    }
+    if (m === 'PUT' && p === '/admin/external-blocks') {
+      // Annotate an agent block with its Travel Chapter booking reference (from the agent's booking email).
+      const b = await readJson(request);
+      if (!b.source_id || !b.uid || !/^[A-Za-z0-9-]{3,32}$/.test(b.agent_ref || '')) throw new HttpError(400, 'source_id, uid and agent_ref required');
+      const r = await db.prepare('UPDATE ical_events SET agent_ref = ? WHERE source_id = ? AND uid = ?').bind(b.agent_ref, b.source_id, b.uid).run();
+      if (!r.meta.changes) throw new HttpError(404, 'block not found');
+      return json({ ok: true });
+    }
     if (m === 'GET' && p === '/admin/bookings') {
       const { results } = await db.prepare(
         'SELECT id, guest_name, arrival, departure, nights, party_size, amount_pence, status, source FROM bookings WHERE departure >= ? ORDER BY arrival',
@@ -87,8 +104,16 @@ async function route(request, env) {
       return json({ booking: b, payments: payments.results, emails: emails.results });
     }
     if (m === 'POST' && (mm = p.match(/^\/admin\/bookings\/([^/]+)\/cancel$/))) {
-      const body = await readJson(request);
-      return json(await cancelBooking(db, now, mm[1], body.reason));
+      return json(await cancelBooking(env, db, now, mm[1], await readJson(request)));
+    }
+    if (m === 'POST' && (mm = p.match(/^\/admin\/bookings\/([^/]+)\/confirm$/))) {
+      return json(await confirmAuthorized(env, db, now, mm[1], await readJson(request)));
+    }
+    if (m === 'POST' && (mm = p.match(/^\/admin\/changes\/([^/]+)\/coordinate$/))) {
+      return json(await coordinateChange(db, now, mm[1], await readJson(request)));
+    }
+    if (m === 'POST' && (mm = p.match(/^\/admin\/changes\/([^/]+)\/complete$/))) {
+      return json(await completeChange(env, db, now, mm[1], await readJson(request)));
     }
     if (m === 'POST' && p === '/admin/import') return json(await importBooking(env, db, now, await readJson(request)));
     if (m === 'PUT' && (mm = p.match(/^\/admin\/templates\/([a-z_]+)$/))) {
@@ -102,13 +127,15 @@ async function route(request, env) {
       return json({ ok: true, name: mm[1], approved: !!t.approved });
     }
     if (m === 'PUT' && (mm = p.match(/^\/admin\/calendar-sources\/([a-z0-9_-]+)$/))) {
+      // Feed URLs are credentials: register the NAME of the Worker secret that holds the URL, never the URL.
       const s = await readJson(request);
-      if (!/^https:\/\//.test(s.url || '')) throw new HttpError(400, 'https url required');
+      if (!['agent', 'owner_publisher'].includes(s.kind)) throw new HttpError(400, "kind must be 'agent' or 'owner_publisher'");
+      if (!/^[A-Z][A-Z0-9_]{2,63}$/.test(s.url_secret || '')) throw new HttpError(400, 'url_secret must be the name of a Worker secret, e.g. ICAL_TC_URL');
       await db.prepare(
-        `INSERT INTO calendar_sources (id, url, enabled) VALUES (?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET url = excluded.url, enabled = excluded.enabled`,
-      ).bind(mm[1], s.url, s.enabled === false ? 0 : 1).run();
-      return json({ ok: true });
+        `INSERT INTO calendar_sources (id, kind, url_secret, enabled, allow_empty) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, url_secret = excluded.url_secret, enabled = excluded.enabled, allow_empty = excluded.allow_empty`,
+      ).bind(mm[1], s.kind, s.url_secret, s.enabled === false ? 0 : 1, s.allow_empty ? 1 : 0).run();
+      return json({ ok: true, secret_present: !!env[s.url_secret] });
     }
     if (m === 'POST' && p === '/admin/run') {
       const body = await readJson(request);

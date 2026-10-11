@@ -13,16 +13,22 @@ CREATE TABLE bookings (
   nights           INTEGER NOT NULL,
   amount_pence     INTEGER NOT NULL CHECK (amount_pence > 0),
   currency         TEXT NOT NULL DEFAULT 'gbp',
-  status           TEXT NOT NULL CHECK (status IN ('hold','pending_payment','confirmed','cancelled','expired')),
+  status           TEXT NOT NULL CHECK (status IN ('hold','pending_payment','authorized','confirmed','cancellation_pending','cancelled','expired')),
   hold_expires_at  TEXT,
   pay_token        TEXT,                           -- secret for the guest's pay link
   source           TEXT NOT NULL CHECK (source IN ('direct','import')),
   notes            TEXT,
+  agent_ref        TEXT,                           -- Travel Chapter booking reference, if the agent holds a record
+  google_event_id  TEXT,                           -- event on the owner's published Google calendar
+  published_at     TEXT,
+  propagation      TEXT NOT NULL DEFAULT 'none'
+                   CHECK (propagation IN ('none','publish_failed','published','agent_confirmed','overdue','withdrawn')),
+  agent_confirmed_at TEXT,
   created_at       TEXT NOT NULL,
   updated_at       TEXT NOT NULL
 );
 
--- One row per occupied night. PRIMARY KEY on night makes double-booking impossible,
+-- One row per night held by a DIRECT booking. PRIMARY KEY on night makes double-booking impossible,
 -- even under concurrent requests. owner = 'booking:<id>' or 'ical:<source_id>'.
 CREATE TABLE night_locks (
   night      TEXT PRIMARY KEY,
@@ -31,15 +37,71 @@ CREATE TABLE night_locks (
 );
 CREATE INDEX idx_night_locks_owner ON night_locks(owner);
 
+-- Feed URLs are credentials: only the NAME of the Worker secret holding the URL is stored here.
 CREATE TABLE calendar_sources (
-  id           TEXT PRIMARY KEY,
-  url          TEXT NOT NULL,                      -- stored here, not in source control
-  enabled      INTEGER NOT NULL DEFAULT 1,
-  last_ok_at   TEXT,
-  last_attempt_at TEXT,
-  last_error   TEXT,
+  id               TEXT PRIMARY KEY,                 -- e.g. 'travel_chapter', 'owner_google'
+  kind             TEXT NOT NULL CHECK (kind IN ('agent','owner_publisher')),
+  url_secret       TEXT NOT NULL,                    -- e.g. 'ICAL_TC_URL'
+  enabled          INTEGER NOT NULL DEFAULT 1,
+  allow_empty      INTEGER NOT NULL DEFAULT 0,       -- an empty feed is UNVERIFIED unless the owner allows it
+  last_ok_at       TEXT,
+  last_attempt_at  TEXT,
+  last_error       TEXT,
   last_event_count INTEGER
 );
+
+-- Every VEVENT ever seen, by origin. Disappearance never silently releases dates.
+-- state: present | missing (gone from feed, still blocks) | released (owner-verified gone) | ghost (released then reappeared, blocks)
+CREATE TABLE ical_events (
+  source_id         TEXT NOT NULL REFERENCES calendar_sources(id),
+  uid               TEXT NOT NULL,
+  start_date        TEXT NOT NULL,                   -- Europe/London date, inclusive
+  end_date          TEXT NOT NULL,                   -- Europe/London date, checkout-exclusive
+  summary           TEXT,
+  last_modified     TEXT,
+  sequence          INTEGER,
+  state             TEXT NOT NULL CHECK (state IN ('present','missing','released','ghost')),
+  linked_booking_id TEXT,                            -- set when this block IS one of our direct bookings echoed back
+  agent_ref         TEXT,
+  first_seen_at     TEXT NOT NULL,
+  last_seen_at      TEXT NOT NULL,
+  missing_since     TEXT,
+  PRIMARY KEY (source_id, uid)
+);
+CREATE INDEX idx_ical_events_dates ON ical_events(start_date, end_date);
+
+-- A direct-booking night cannot be locked while an unlinked blocking external event covers it.
+CREATE TRIGGER trg_night_locks_external_block
+BEFORE INSERT ON night_locks
+WHEN EXISTS (
+  SELECT 1 FROM ical_events e
+  WHERE e.state IN ('present','missing','ghost')
+    AND e.start_date <= NEW.night AND e.end_date > NEW.night
+    AND (e.linked_booking_id IS NULL OR 'booking:' || e.linked_booking_id != NEW.owner)
+)
+BEGIN
+  SELECT RAISE(ABORT, 'EXTERNAL_BLOCK');
+END;
+
+-- Coordinated changes with Travel Chapter. Dates stay blocked until the change is completed by the owner.
+CREATE TABLE pending_changes (
+  id            TEXT PRIMARY KEY,
+  kind          TEXT NOT NULL CHECK (kind IN ('cancel_direct','external_missing','external_amended','ghost_block','overlap','propagation_overdue')),
+  booking_id    TEXT,
+  source_id     TEXT,
+  uid           TEXT,
+  start_date    TEXT,
+  end_date      TEXT,
+  status        TEXT NOT NULL CHECK (status IN ('open','coordinated','released','verified','closed')),
+  agreed_at     TEXT,                              -- agreed time for the simultaneous change on both systems
+  draft_message TEXT,                              -- text for the owner to send; never sent automatically
+  detail        TEXT,
+  acknowledgment TEXT,                             -- e.g. who at Travel Chapter confirmed, and when
+  created_at    TEXT NOT NULL,
+  updated_at    TEXT NOT NULL,
+  closed_at     TEXT
+);
+CREATE INDEX idx_pending_changes_status ON pending_changes(status);
 
 CREATE TABLE payments (
   id                         TEXT PRIMARY KEY,
@@ -48,7 +110,7 @@ CREATE TABLE payments (
   stripe_payment_intent_id   TEXT UNIQUE,
   amount_pence               INTEGER NOT NULL,
   currency                   TEXT NOT NULL,
-  status                     TEXT NOT NULL CHECK (status IN ('pending','succeeded','failed','refunded_externally')),
+  status                     TEXT NOT NULL CHECK (status IN ('pending','authorized','succeeded','failed','canceled','refunded_externally')),
   livemode                   INTEGER NOT NULL,
   checkout_url               TEXT,
   checkout_expires_at        TEXT,

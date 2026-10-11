@@ -28,4 +28,4 @@ AFTER=$(q "SELECT id,status FROM bookings")
 TPL=$(q "SELECT COUNT(*) AS n FROM email_templates")
 echo "   after:  $AFTER  templates: $TPL"
 rm -rf "$STATE" .wrangler/state
-if [ "$BEFORE" = "$AFTER" ] && [ "$TPL" = '[{"n":3}]' ]; then echo "ROLLBACK REHEARSAL: PASS"; else echo "ROLLBACK REHEARSAL: FAIL"; exit 1; fi
+if [ "$BEFORE" = "$AFTER" ] && [ "$TPL" = '[{"n":5}]' ]; then echo "ROLLBACK REHEARSAL: PASS"; else echo "ROLLBACK REHEARSAL: FAIL"; exit 1; fi

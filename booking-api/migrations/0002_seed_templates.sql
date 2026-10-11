@@ -6,15 +6,45 @@ INSERT INTO email_templates (name, subject, html, text, approved, updated_at) VA
 ('maintenance_alert',
  'Little Slate House booking system: {{issue_count}} issue(s) on {{date}}',
  '<p>Daily maintenance check for {{date}} found:</p><pre>{{issues}}</pre>',
- 'Daily maintenance check for {{date}} found:\n\n{{issues}}\n',
+ 'Daily maintenance check for {{date}} found:
+
+{{issues}}
+',
  1, '2026-10-11T00:00:00Z'),
 ('confirmation',
  'DRAFT Booking confirmed: Little Slate House, {{arrival_date}}',
  '<p>Dear {{guest_name}},</p><p>DRAFT: owner to supply wording. Booking {{booking_id}}: {{arrival_date}} to {{departure_date}} ({{nights}} nights), {{party_size}} guests. Paid: {{amount}}.</p>',
- 'Dear {{guest_name}},\n\nDRAFT: owner to supply wording. Booking {{booking_id}}: {{arrival_date}} to {{departure_date}} ({{nights}} nights), {{party_size}} guests. Paid: {{amount}}.\n',
+ 'Dear {{guest_name}},
+
+DRAFT: owner to supply wording. Booking {{booking_id}}: {{arrival_date}} to {{departure_date}} ({{nights}} nights), {{party_size}} guests. Paid: {{amount}}.
+',
  0, '2026-10-11T00:00:00Z'),
 ('management_new_booking',
  'New confirmed booking {{booking_id}}: {{arrival_date}} to {{departure_date}}',
  '<p>New confirmed booking for Little Slate House.</p><ul><li>Booking: {{booking_id}}</li><li>Guest: {{guest_name}}</li><li>Arrive: {{arrival_date}} (3pm)</li><li>Depart: {{departure_date}}</li><li>Nights: {{nights}}</li><li>Party size: {{party_size}}</li></ul>',
- 'New confirmed booking for Little Slate House.\n\nBooking: {{booking_id}}\nGuest: {{guest_name}}\nArrive: {{arrival_date}} (3pm)\nDepart: {{departure_date}}\nNights: {{nights}}\nParty size: {{party_size}}\n',
+ 'New confirmed booking for Little Slate House.
+
+Booking: {{booking_id}}
+Guest: {{guest_name}}
+Arrive: {{arrival_date}} (3pm)
+Depart: {{departure_date}}
+Nights: {{nights}}
+Party size: {{party_size}}
+',
+ 0, '2026-10-11T00:00:00Z'),
+('owner_authorization',
+ 'Action needed: card authorised for {{booking_id}} ({{arrival_date}} to {{departure_date}})',
+ '<p>A guest has authorised payment of {{amount}} for {{booking_id}}: {{arrival_date}} to {{departure_date}} ({{nights}} nights, {{party_size}} guests). Nothing has been charged yet.</p><p>Calendar propagation: {{propagation}}. Confirm the dates are blocked on Travel Chapter, then confirm the booking to capture payment. Card authorisations usually lapse after 7 days.</p>',
+ 'A guest has authorised payment of {{amount}} for {{booking_id}}: {{arrival_date}} to {{departure_date}} ({{nights}} nights, {{party_size}} guests). Nothing has been charged yet.
+
+Calendar propagation: {{propagation}}. Confirm the dates are blocked on Travel Chapter, then confirm the booking to capture payment. Card authorisations usually lapse after 7 days.
+',
+ 1, '2026-10-11T00:00:00Z'),
+('authorization_received',
+ 'DRAFT Payment authorised: Little Slate House, {{arrival_date}}',
+ '<p>Dear {{guest_name}},</p><p>DRAFT: owner to supply wording. We have received your payment authorisation for {{arrival_date}} to {{departure_date}}. Your card will be charged once we confirm the dates.</p>',
+ 'Dear {{guest_name}},
+
+DRAFT: owner to supply wording. We have received your payment authorisation for {{arrival_date}} to {{departure_date}}. Your card will be charged once we confirm the dates.
+',
  0, '2026-10-11T00:00:00Z');

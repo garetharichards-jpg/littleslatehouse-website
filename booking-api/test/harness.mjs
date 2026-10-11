@@ -18,7 +18,13 @@ export const BASE_BINDINGS = {
   RESEND_API_KEY: 're_test_fixture',
   FROM_EMAIL: 'LSH Test <test@littleslatehouse.co.uk>',
   ADMIN_TOKEN: ADMIN,
-  ICAL_EXPORT_TOKEN: 'ical-export-token-fixture',
+  ICAL_TC_URL: 'https://calendar.test/tc-private-feed-token.ics',
+  ICAL_OWNER_URL: 'https://calendar.test/owner-private-feed-token.ics',
+  GOOGLE_CLIENT_ID: 'gid', GOOGLE_CLIENT_SECRET: 'gsecret', GOOGLE_REFRESH_TOKEN: 'grefresh',
+  GOOGLE_CALENDAR_ID: 'lsh-bookings@group.calendar.test',
+  CAPTURE_MODE: 'automatic',
+  TC_PROPERTY_CODE: '00000',
+  PROPAGATION_SLA_HOURS: '26',
   EMAIL_ALLOWLIST: 'guest@test.invalid,mgmt@test.invalid,owner@test.invalid',
   MANAGEMENT_EMAIL: 'mgmt@test.invalid',
   MAINTENANCE_EMAIL: 'owner@test.invalid',
@@ -26,9 +32,8 @@ export const BASE_BINDINGS = {
   ENTRY_CODE: 'TEST-CODE-0000',
   ALLOW_CLOCK_OVERRIDE: 'true',
   ALLOW_TEST_FAULTS: 'true',
-  REQUIRE_EXTERNAL_CALENDAR: 'true',
+  REQUIRE_AGENT_FEED: 'true',
   CALENDAR_MAX_STALENESS_HOURS: '3',
-  CALENDAR_ALLOW_EMPTY: 'false',
   HOLD_HOURS: '48',
   DAILY_CRON: '45 6 * * *',
   API_BASE_URL: 'http://api.test',
@@ -36,22 +41,32 @@ export const BASE_BINDINGS = {
   SITE_ORIGINS: 'https://site.test',
 };
 
-export const ICS_URL = 'https://calendar.test/feed.ics';
+export const TC_URL = BASE_BINDINGS.ICAL_TC_URL;
+export const OWNER_URL = BASE_BINDINGS.ICAL_OWNER_URL;
 
 export function ics(events) {
   const d = (s) => s.replace(/-/g, '');
   return ['BEGIN:VCALENDAR', 'VERSION:2.0',
-    ...events.flatMap((e, i) => ['BEGIN:VEVENT', `UID:${e.uid || `ext-${i}@ota.test`}`,
-      `DTSTART;VALUE=DATE:${d(e.start)}`, `DTEND;VALUE=DATE:${d(e.end)}`, 'SUMMARY:Blocked', 'END:VEVENT']),
+    ...events.flatMap((e, i) => ['BEGIN:VEVENT', `UID:${e.uid || `tc-${e.start}-${i}@tabs.test`}`,
+      e.dtstart ? `DTSTART:${e.dtstart}` : `DTSTART;VALUE=DATE:${d(e.start)}`,
+      e.dtend ? `DTEND:${e.dtend}` : `DTEND;VALUE=DATE:${d(e.end)}`, 'SUMMARY:Blocked', 'END:VEVENT']),
     'END:VCALENDAR'].join('\r\n');
 }
 
 function migrationsSql() {
-  return readdirSync(new URL('../migrations/', import.meta.url)).sort()
+  const lines = readdirSync(new URL('../migrations/', import.meta.url)).sort()
     .map((f) => readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8'))
-    .join('\n')
-    .split('\n').filter((l) => !l.trim().startsWith('--')).join('\n')
-    .split(/;\s*\n/).map((s) => s.trim()).filter(Boolean);
+    .join('\n').split('\n').filter((l) => !l.trim().startsWith('--'));
+  // Split on ';' at end of line, but keep CREATE TRIGGER ... BEGIN ... END; together.
+  const out = []; let cur = []; let inTrigger = false;
+  for (const l of lines) {
+    cur.push(l);
+    if (/^\s*CREATE TRIGGER/i.test(l)) inTrigger = true;
+    const ends = /;\s*$/.test(l);
+    if (ends && (!inTrigger || /^\s*END;\s*$/i.test(l))) { out.push(cur.join('\n').trim()); cur = []; inTrigger = false; }
+  }
+  if (cur.join('').trim()) out.push(cur.join('\n').trim());
+  return out.filter(Boolean);
 }
 
 export async function start(bindingOverrides = {}) {
@@ -59,8 +74,12 @@ export async function start(bindingOverrides = {}) {
   const world = {
     calls: [],
     resendStatus: 200,
-    icsBody: ics([{ start: '2027-06-01', end: '2027-06-03' }]),
-    icsStatus: 200,
+    tc: ics([{ start: '2027-06-01', end: '2027-06-03' }]),   // Travel Chapter TABs feed
+    tcStatus: 200,
+    owner: ics([]),                                            // owner's dedicated Google calendar feed
+    ownerStatus: 200,
+    google: new Map(),                                         // mock Google Calendar: eventId -> event
+    googleStatus: 200,
     stripeSessions: 0,
     networkDown: false,
   };
@@ -84,7 +103,27 @@ export async function start(bindingOverrides = {}) {
         if (world.resendStatus !== 200) return Response.json({ message: 'simulated failure' }, { status: world.resendStatus });
         return Response.json({ id: `re_${world.calls.length}` });
       }
-      if (url === ICS_URL) return new Response(world.icsBody, { status: world.icsStatus });
+      if (url === TC_URL) return new Response(world.tc, { status: world.tcStatus });
+      if (url === OWNER_URL) return new Response(world.owner, { status: world.ownerStatus });
+      if (url === 'https://oauth2.googleapis.com/token') return Response.json({ access_token: 'gtoken' });
+      const g = /^https:\/\/www\.googleapis\.com\/calendar\/v3\/calendars\/[^/]+\/events(?:\/([^/?]+))?/.exec(url);
+      if (g) {
+        if (world.googleStatus !== 200) return new Response('google down', { status: world.googleStatus });
+        const id = g[1];
+        if (req.method === 'POST') {
+          const ev = JSON.parse(body);
+          if (world.google.has(ev.id)) return new Response('exists', { status: 409 });
+          world.google.set(ev.id, ev); return Response.json(ev);
+        }
+        if (req.method === 'PUT') { world.google.set(id, JSON.parse(body)); return Response.json(JSON.parse(body)); }
+        if (req.method === 'DELETE') { const had = world.google.delete(id); return new Response(null, { status: had ? 204 : 404 }); }
+        if (req.method === 'GET') return world.google.has(id) ? Response.json(world.google.get(id)) : new Response('nf', { status: 404 });
+      }
+      if (url.startsWith('https://api.stripe.com/v1/payment_intents/')) {
+        const [, piId, action] = /payment_intents\/([^/]+)\/(\w+)/.exec(url);
+        if (world.stripeFail) return Response.json({ error: { message: 'simulated' } }, { status: 402 });
+        return Response.json({ id: piId, object: 'payment_intent', status: action === 'capture' ? 'succeeded' : 'canceled' });
+      }
       return new Response('unexpected outbound call', { status: 599 });
     },
   }));
@@ -117,11 +156,12 @@ export async function start(bindingOverrides = {}) {
   return { mf, db, world, api, admin, webhook, emails, stripeCalls, stop: () => mf.dispose() };
 }
 
-// Common setup: calendar source synced, templates approved.
+// Common setup: both calendar sources registered and synced, templates approved.
 export async function ready(t, { now } = {}) {
-  await t.admin('PUT', '/admin/calendar-sources/ota', { url: ICS_URL });
+  await t.admin('PUT', '/admin/calendar-sources/travel_chapter', { kind: 'agent', url_secret: 'ICAL_TC_URL' });
+  await t.admin('PUT', '/admin/calendar-sources/owner_google', { kind: 'owner_publisher', url_secret: 'ICAL_OWNER_URL', allow_empty: true });
   const r = await t.admin('POST', '/admin/run', { job: 'hourly', ...(now ? { now } : {}) });
-  for (const name of ['confirmation', 'management_new_booking']) {
+  for (const name of ['confirmation', 'management_new_booking', 'authorization_received']) {
     const row = await t.db.prepare('SELECT * FROM email_templates WHERE name = ?').bind(name).first();
     await t.admin('PUT', `/admin/templates/${name}`, { subject: row.subject, html: row.html, text: row.text, approved: true });
   }

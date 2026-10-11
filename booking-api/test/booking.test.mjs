@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { ICS_URL, guest, holdAndCheckout, ics, ready, sessionEvent, start } from './harness.mjs';
+import { guest, holdAndCheckout, ics, ready, sessionEvent, start } from './harness.mjs';
 
 const count = async (db, sql, ...b) => (await db.prepare(sql).bind(...b).first()).n;
 
@@ -24,7 +24,7 @@ describe('safety rails', () => {
     const h = await t.admin('POST', '/admin/bookings', guest({ arrival: '2027-09-01', departure: '2027-09-03' }));
     const before = t.stripeCalls().length;
     const c = await t.admin('POST', `/admin/bookings/${h.data.id}/cancel`, { reason: 'test' });
-    assert.equal(c.data.status, 'cancelled');
+    assert.equal(c.data.booking.status, 'cancelled', 'unpublished hold is released directly');
     assert.equal(t.stripeCalls().length, before);
   });
 });
@@ -70,7 +70,7 @@ describe('calendar availability fails closed', () => {
   test('blocked (HTTP 403) feed => unknown, not available', async () => {
     const t = await start();
     try {
-      t.world.icsStatus = 403;
+      t.world.tcStatus = 403;
       await ready(t);
       assert.equal((await t.admin('POST', '/admin/bookings', guest())).status, 409);
     } finally { await t.stop(); }
@@ -79,7 +79,7 @@ describe('calendar availability fails closed', () => {
   test('empty feed => treated as unverified', async () => {
     const t = await start();
     try {
-      t.world.icsBody = ics([]);
+      t.world.tc = ics([]);
       const r = await ready(t);
       assert.equal(r.data.calendars[0].ok, false);
       assert.match(r.data.calendars[0].error, /zero events/);
@@ -94,7 +94,7 @@ describe('calendar availability fails closed', () => {
       let a = await t.api('GET', '/api/availability?from=2027-06-01&to=2027-06-05');
       assert.deepEqual(a.data.unavailable, ['2027-06-01', '2027-06-02']);
       assert.equal(a.data.status, 'ok');
-      t.world.icsStatus = 500;
+      t.world.tcStatus = 500;
       await t.admin('POST', '/admin/run', { job: 'hourly' });
       a = await t.api('GET', '/api/availability?from=2027-06-01&to=2027-06-05');
       assert.deepEqual(a.data.unavailable, ['2027-06-01', '2027-06-02'], 'old blocks retained');
@@ -104,19 +104,22 @@ describe('calendar availability fails closed', () => {
     } finally { await t.stop(); }
   });
 
-  test('external calendar nights block holds; own exported UIDs are not re-imported', async () => {
+  test('agent nights block holds; our own Google events are not treated as conflicts', async () => {
     const t = await start();
     try {
       await ready(t);
       assert.equal((await t.admin('POST', '/admin/bookings', guest({ arrival: '2027-05-30', departure: '2027-06-02' }))).status, 409);
-      const h = await t.admin('POST', '/admin/bookings', guest());
-      const feed = await t.api('GET', '/calendar.ics?t=ical-export-token-fixture');
-      assert.match(feed.data, new RegExp(`UID:${h.data.id}@littleslatehouse.co.uk`));
-      assert.doesNotMatch(feed.data, /Test Guest|guest@test/, 'no guest details in export');
-      assert.equal((await t.api('GET', '/calendar.ics?t=wrong')).status, 404);
-      t.world.icsBody = feed.data.replace('END:VCALENDAR', ics([{ start: '2027-06-01', end: '2027-06-03' }]).split('\r\n').slice(2).join('\r\n'));
+      // A confirmed direct booking is published to Google; the owner feed then shows it with our own UID.
+      const { booking: b } = await holdAndCheckout(t);
+      await t.webhook(sessionEvent('checkout.session.completed', b));
+      const ev = [...t.world.google.values()][0];
+      assert.equal(ev.start.date, b.arrival);
+      assert.doesNotMatch(JSON.stringify(ev), /Test Guest|guest@test/, 'no guest details on the shared calendar');
+      t.world.owner = ics([{ uid: `${ev.id}@google.com`, start: b.arrival, end: b.departure }]);
       const r = await t.admin('POST', '/admin/run', { job: 'hourly' });
-      assert.equal(r.data.calendars[0].conflicts.length, 0, 'own booking echoed back is not a conflict');
+      assert.deepEqual(r.data.calendars.flatMap((c) => c.anomalies), []);
+      const blocks = (await t.admin('GET', '/admin/external-blocks')).data;
+      assert.equal(blocks.find((x) => x.source_id === 'owner_google').linked_booking_id, b.id);
     } finally { await t.stop(); }
   });
 });
@@ -130,7 +133,7 @@ describe('booking conflicts and holds', () => {
     assert.equal((await t.admin('POST', '/admin/bookings', guest())).status, 201);
     const o = await t.admin('POST', '/admin/bookings', guest({ arrival: '2027-03-13', departure: '2027-03-16' }));
     assert.equal(o.status, 409);
-    assert.deepEqual(o.data.conflicts.map((c) => c.night), ['2027-03-13']);
+    assert.deepEqual(o.data.conflicts.direct.map((c) => c.night), ['2027-03-13']);
     assert.equal((await t.admin('POST', '/admin/bookings', guest({ arrival: '2027-03-14', departure: '2027-03-17' }))).status, 201);
   });
 

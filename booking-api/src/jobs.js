@@ -1,8 +1,12 @@
-// Scheduled work. Hourly: expire holds, sync calendars, retry email. Daily: + welcome emails, maintenance.
+// Scheduled work.
+// Hourly: expire unpublished holds, pull both feeds, propagation watch, retry email.
+// Daily:  + welcome emails, full cross-channel reconciliation, owner alert.
 
 import { bookingVars, expireHolds, getBooking } from './bookings.js';
 import { calendarStatus, syncAll } from './calendar.js';
+import { openChange, setChangeStatus } from './changes.js';
 import { retryFailed, sendEmail } from './email.js';
+import { eventExists } from './google.js';
 import { addDays, automationEnabled, iso, londonDate } from './util.js';
 
 async function varsForLogRow(env, db, row) {
@@ -14,10 +18,40 @@ async function varsForLogRow(env, db, row) {
   return b ? bookingVars(env, b, row.template) : {};
 }
 
+// Travel Chapter can take up to 24h to import our Google feed. Flag only once that window has passed.
+export async function propagationWatch(env, db, now) {
+  const slaMs = Number(env.PROPAGATION_SLA_HOURS || 26) * 3600_000;
+  const { results } = await db.prepare(
+    "SELECT * FROM bookings WHERE status IN ('authorized','confirmed') AND propagation = 'published' AND published_at < ?",
+  ).bind(iso(new Date(now.getTime() - slaMs))).all();
+  for (const b of results) {
+    await db.prepare("UPDATE bookings SET propagation = 'overdue', updated_at = ? WHERE id = ?").bind(iso(now), b.id).run();
+    await openChange(db, now, { kind: 'propagation_overdue', booking_id: b.id, start_date: b.arrival, end_date: b.departure,
+      detail: { published_at: b.published_at, note: 'Travel Chapter feed does not yet show this block. Contact Travel Chapter before confirming.' } });
+  }
+  return results.map((b) => b.id);
+}
+
+// Coordinated cancellations done on our side: verified once the agent feed no longer shows the block.
+async function verifyReleasedCancellations(db, now) {
+  const { results } = await db.prepare("SELECT * FROM pending_changes WHERE kind = 'cancel_direct' AND status = 'released'").all();
+  const stillShown = [];
+  for (const c of results) {
+    const echo = await db.prepare(
+      `SELECT 1 FROM ical_events e JOIN calendar_sources s ON s.id = e.source_id
+       WHERE s.kind = 'agent' AND e.linked_booking_id = ? AND e.state IN ('present','ghost') LIMIT 1`,
+    ).bind(c.booking_id).first();
+    if (!echo) await setChangeStatus(db, now, c.id, 'verified');
+    else stillShown.push(c);
+  }
+  return stillShown;
+}
+
 export async function hourly(env, db, now, fetcher = fetch) {
   return {
     expired_holds: await expireHolds(db, now),
     calendars: await syncAll(env, db, now, fetcher),
+    propagation_overdue: await propagationWatch(env, db, now),
     email_retries: await retryFailed(env, db, now, (r) => varsForLogRow(env, db, r), fetcher),
   };
 }
@@ -39,21 +73,59 @@ export async function sendWelcomeEmails(env, db, now, fetcher = fetch) {
   return out;
 }
 
-export async function maintenanceChecks(env, db, now) {
+export async function reconcile(env, db, now, fetcher = fetch) {
   const issues = [];
   const today = londonDate(now);
+  const hoursSince = (t) => Math.round((now - new Date(t)) / 3600_000);
 
   const cal = await calendarStatus(env, db, now);
-  for (const p of cal.problems) issues.push(`Calendar: ${p}`);
+  for (const p of cal.problems) issues.push(`Calendar: ${p} — availability is UNKNOWN; do not quote`);
 
-  const conf = await db.prepare(
-    "SELECT detail FROM audit_log WHERE action = 'calendar_conflict' AND at >= ? ORDER BY id DESC LIMIT 20",
-  ).bind(iso(new Date(now.getTime() - 26 * 3600_000))).all();
-  for (const r of conf.results) issues.push(`Calendar conflict (external booking overlaps ours): ${r.detail}`);
+  // Open coordinated changes, oldest first.
+  const { results: changes } = await db.prepare(
+    "SELECT * FROM pending_changes WHERE status IN ('open','coordinated','released') ORDER BY created_at",
+  ).all();
+  for (const c of changes) {
+    const what = `${c.kind} ${c.start_date ?? ''}→${c.end_date ?? ''}${c.booking_id ? ` (${c.booking_id})` : ''}`;
+    if (c.kind === 'overlap') issues.push(`CRITICAL possible double booking: ${what}`);
+    else if (c.status !== 'released') issues.push(`Pending coordinated change [${c.status}] ${what}, open ${hoursSince(c.created_at)}h`);
+  }
 
-  const tpl = await db.prepare("SELECT name FROM email_templates WHERE approved = 1").all();
+  for (const c of await verifyReleasedCancellations(db, now)) {
+    if (now - new Date(c.updated_at) > 26 * 3600_000) {
+      issues.push(`Travel Chapter still shows cancelled booking ${c.booking_id} (${c.start_date}→${c.end_date}) ${hoursSince(c.updated_at)}h after release`);
+    }
+  }
+
+  const { results: active } = await db.prepare(
+    "SELECT * FROM bookings WHERE status IN ('authorized','confirmed','cancellation_pending') AND departure >= ?",
+  ).bind(today).all();
+  for (const b of active) {
+    if (b.propagation === 'publish_failed') issues.push(`Booking ${b.id} could not be published to the Google calendar: Travel Chapter cannot see it`);
+    if (b.propagation === 'published') issues.push(`Booking ${b.id}: waiting for Travel Chapter to import the block (published ${hoursSince(b.published_at)}h ago; can take 24h)`);
+    if (b.propagation === 'overdue') issues.push(`Booking ${b.id}: Travel Chapter has NOT shown the block ${hoursSince(b.published_at)}h after publishing`);
+    if (['published', 'agent_confirmed', 'overdue'].includes(b.propagation) && b.status !== 'cancellation_pending') {
+      const exists = await eventExists(env, b.id, fetcher);
+      if (exists === false) issues.push(`Booking ${b.id}: its block is missing from the Google calendar`);
+    }
+    if (b.status === 'authorized') {
+      const age = hoursSince(b.updated_at);
+      issues.push(`Booking ${b.id} is authorised, awaiting owner confirmation (${age}h)${age > 5 * 24 ? ' — card authorisation lapses after ~7 days' : ''}`);
+    }
+  }
+
+  // Duplicate or overlapping blocks inside the agent feed.
+  const { results: dupes } = await db.prepare(
+    `SELECT a.uid AS a_uid, b.uid AS b_uid, a.start_date, a.end_date FROM ical_events a JOIN ical_events b
+       ON a.source_id = b.source_id AND a.uid < b.uid AND a.start_date < b.end_date AND b.start_date < a.end_date
+     JOIN calendar_sources s ON s.id = a.source_id
+     WHERE s.kind = 'agent' AND a.state IN ('present','ghost') AND b.state IN ('present','ghost') AND a.end_date >= ?`,
+  ).bind(today).all();
+  for (const d of dupes) issues.push(`Duplicate/overlapping Travel Chapter blocks around ${d.start_date}→${d.end_date}`);
+
+  const tpl = await db.prepare('SELECT name FROM email_templates WHERE approved = 1').all();
   const approved = new Set(tpl.results.map((t) => t.name));
-  for (const n of ['confirmation', 'management_new_booking', 'welcome']) {
+  for (const n of ['confirmation', 'management_new_booking', 'welcome', 'authorization_received']) {
     if (!approved.has(n)) issues.push(`Template '${n}' is missing or not approved`);
   }
 
@@ -81,7 +153,7 @@ export async function maintenanceChecks(env, db, now) {
 export async function daily(env, db, now, fetcher = fetch) {
   const h = await hourly(env, db, now, fetcher);
   const welcome = await sendWelcomeEmails(env, db, now, fetcher);
-  const issues = await maintenanceChecks(env, db, now);
+  const issues = await reconcile(env, db, now, fetcher);
   let alert = null;
   if (issues.length && env.MAINTENANCE_EMAIL) {
     const date = londonDate(now);
