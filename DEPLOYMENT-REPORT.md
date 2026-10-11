@@ -1,91 +1,96 @@
 # Little Slate House — Booking System Deployment Report
 
-Date: 2026-10-11 · Branch: `ccr-175a0349-1giy42`
-Status: **BLOCKED — no deployment or code changes made. Production untouched.**
+Updated: 2026-10-11 · Branch: `ccr-175a0349-1giy42`
 
-## 1. What was inspected
+**Status:** booking backend built and tested **locally**, but **not deployed**. Cloudflare, Stripe and Resend are not reachable from this session, and the existing Booking Desk ChatGPT Site cannot be inspected. Production is untouched: no live booking changed, no email sent, no charge or refund made.
 
-| Item | Finding |
+Guest names, payment IDs, management addresses and the entry code are deliberately kept out of this public repo.
+
+## 1. Project and site
+
+| Item | Status |
 |---|---|
-| This repo (`garetharichards-jpg/littleslatehouse-website`) | Static Astro 6 + Tailwind marketing site only (6 pages). Only repo visible to this session (`list_repos`). |
-| Booking Desk source | **Not found.** No Stripe, Resend, D1, Worker, wrangler, booking or payment code anywhere in the repo or git history (8 commits). |
-| Database / bookings / business rules | **Not found.** No schema, records, deposit rules, cleaner/management contacts, or welcome-email template. |
-| £900 New Year payment | **Cannot be reconciled** — no booking records or Stripe access. |
-| Existing backend | Only `n8n-workflows/website-enquiry-handler.json` (enquiry email via n8n, webhook URL still a placeholder in `EnquiryForm.astro`). `DECISIONS.md` states payments/booking engine were explicitly out of scope. |
-| Availability calendar | Placeholder only (`availability.astro`); intended source was a Travel Chapter iCal feed. |
-| Cloudflare Pages project name | **Unknown.** Repo never records it. Docs only say "Cloudflare Pages", domain `www.littleslatehouse.co.uk`. |
-| Credentials | None in the environment (no Cloudflare, Stripe or Resend tokens, no wrangler login). |
-| Network | Outbound access to `littleslatehouse.co.uk` returns 403 from the sandbox proxy, so the live site, Cloudflare API, Stripe and Resend are all unreachable. |
+| Public site | `https://www.littleslatehouse.co.uk/`: Astro 6 static site in this repo. **Unchanged**: build output is byte-identical to `main` (24 files, verified). |
+| Cloudflare Pages project | **Unverified.** Candidates: `littleslatehouse-website` (`littleslatehouse-website.pages.dev`) or `little-slate-house`. Needs Cloudflare access to confirm, along with root and www DNS. |
+| Booking Desk (ChatGPT Site) | **Inaccessible**: `little-slate-booking-desk.garetharichards.chatgpt.site` is blocked by this sandbox's network policy. Code is probably not extractable from a public Site. **Request a native Site export.** It has not been silently rebuilt. |
+| New backend | `booking-api/`: separate Worker `lsh-booking-api` + D1 `lsh-booking` (live), plus `lsh-booking-api-test` + `lsh-booking-test` (isolated TEST). Not yet deployed, so **no test URL exists yet**. |
 
-## 2. Reused / changed / tested
+## 2. Reused vs new
 
-- **Reused:** n/a — nothing existing to reuse was accessible.
-- **Changed:** nothing except this report. No data invented, no payments, emails or refunds triggered, no deployment made.
-- **Tested:** nothing, as there is no system to test.
-
-## 3. Blockers (what I need)
-
-1. **The "Little Slate Booking Desk" (ChatGPT Site) source and records**: export or paste of its code, DB/schema, bookings, business rules (deposit %, balance due date, cleaner/management recipients, welcome-email text). If it is not exportable, say so and I will build a clean replacement from rules you supply, but that is a different, larger decision than "reuse".
-2. **Cloudflare access**: account/Pages project name, plus an API token scoped to Pages, Workers and D1 (or run the commands in section 5 yourself). Add the token as a secret in the environment settings.
-3. **Network allowlist**: add `api.cloudflare.com`, `api.stripe.com`, `api.resend.com`, `littleslatehouse.co.uk` to the environment's allowed domains.
-4. **Stripe**: test-mode secret key and webhook secret (never live keys at this stage). For the £900 payment: its PaymentIntent/Checkout Session ID and the booking it belongs to (guest name, dates).
-5. **Resend**: API key (test), verified sending domain, and test recipient addresses.
-
-## 4. Planned design (once unblocked; nothing built yet)
-
-- Existing Pages site stays as-is. Add a separate Worker (`lsh-booking-api`) + D1 database; Pages is not modified, so rollback is unaffected.
-- Tables: `bookings`, `payments` (unique `stripe_event_id` / session id for idempotency), `email_log` (unique per booking+template, prevents duplicate sends), `blocked_dates`.
-- Endpoints: create booking + Checkout Session per booking; `/webhook/stripe` (signature-verified, idempotent); `/availability` (conflict check on insert in a transaction).
-- Cron triggers: pre-arrival welcome email at T-2 days, balance/deposit reminders, daily maintenance checks.
-- `AUTOMATION_ENABLED=false` by default; when false, webhooks record events but send no guest emails and take no live payments. Live Stripe keys not installed until you approve.
-- £900 reconciliation: a one-off, dry-run-first script that *links* the existing Stripe payment to the booking, marks it paid, and suppresses confirmation email and any charge or refund. It prints a diff and requires `--apply`.
-- Test plan: Stripe test mode (declined card 4000 0000 0000 0002), webhook replay x2, overlapping-date conflict, Resend failure simulation with retry, cron dry run, rollback.
-
-## 5. Activation / rollback (to be finalised)
-
-- Activate: `wrangler secret put` keys → `wrangler d1 migrations apply` → deploy Worker → set `AUTOMATION_ENABLED=true` only after your written approval.
-- Rollback: set `AUTOMATION_ENABLED=false`; `wrangler rollback` the Worker; Pages deployment can be rolled back from the Pages dashboard (current deployment preserved); export D1 first with `wrangler d1 export`.
-
-## 6. Outstanding
-
-Everything in section 4. No action will be taken on real payments, guest emails or refunds without your explicit approval.
-
----
-
-## Addendum — 2026-10-11 handoff follow-up (still BLOCKED)
-
-Guest, payment and contact details from the handoff are deliberately NOT recorded here (public repo). Keep them in protected config / the D1 database only.
-
-### Re-checked from this session (read-only)
-| Target | Result |
+| Reused | How |
 |---|---|
-| Booking Desk ChatGPT Site | Unreachable: egress proxy denies the host. Source cannot be inspected or exported from here. **Action: owner to use the Site's native export and supply it privately (not via this repo).** |
-| www.littleslatehouse.co.uk, `*.pages.dev` | Unreachable (same). Actual linked Pages project (`littleslatehouse-website` vs `little-slate-house`) **unverified**. |
-| Cloudflare / Stripe / Resend APIs | Unreachable; no tokens or Wrangler login present. |
-| Repo | Unchanged: static Astro site only. No Booking Desk code, so nothing to reuse yet. |
+| Astro site, `/availability/` page | Checkout `success_url`/`cancel_url` return there; CORS allows the site origins for `/api/availability`. No site files changed. |
+| Site facts (`sleeps 6`, 3pm check-in) | Party size capped at 6; 3pm wording lives in the owner's templates. |
+| n8n enquiry workflow | Left as-is (still a placeholder URL); the enquiry form is not altered. |
+| Booking Desk logic, records, templates | **Not reusable yet**: inaccessible. Its welcome template must be pasted in unchanged (`PUT /admin/templates/welcome`). |
 
-### Access blockers (owner actions)
-1. Add to environment allowed domains: `api.cloudflare.com`, `api.stripe.com`, `api.resend.com`, `little-slate-booking-desk.garetharichards.chatgpt.site`, `www.littleslatehouse.co.uk`, `*.pages.dev`.
-2. Provide as environment secrets (never in chat/repo): Cloudflare API token (Pages read, Workers/D1 edit, DNS read), Stripe TEST secret + test webhook secret, Resend API key, entry code (as a Worker secret only).
-3. Provide the ChatGPT Site export, and the authoritative blocked-date source (see below).
+New: `booking-api/` (Worker, D1 migrations, tests, rollback rehearsal, runbook `booking-api/README.md`).
 
-### Decisions needed from owner (not invented)
-- Payment policy: full upfront vs the *proposed, unapproved* 25% deposit / 6-week balance.
-- Security-damage deposit and refund policy (refunds stay disabled regardless).
-- Which calendar is authoritative. An empty/blocked iCal feed will be treated as **unknown, not available**: the Worker fails closed (no hold granted) and alerts management.
+## 3. Test evidence (local: Miniflare/workerd + in-memory D1, all external calls mocked, fictional data)
 
-### Resend DNS (domain currently FAILED) — exact records to fix
-Add in Cloudflare DNS, **DNS-only (grey cloud)**, preserving all existing records:
-- `TXT  resend._domainkey` → full DKIM public key copied from the Resend dashboard (current record failed; likely truncated/split incorrectly)
-- `CNAME rsend` → `rsend-apne1.forge.rmta.net`
-- `CNAME send` → `send.forge.rmta.net`
-Then click Verify in Resend. Confirm exact values in the dashboard, as Resend may show different ones for your region.
+Full output: `booking-api/TEST-EVIDENCE.txt`. **44/44 tests pass; rollback rehearsal passes.**
 
-### Reconciliation of the live payment (planned, not executed)
-Link the existing successful PaymentIntent to the booking by writing a D1 `payments` row with `source='reconciled'` and `confirmation_sent=1` (suppresses any email), only after the booking is confirmed authoritative. No charge, refund or Stripe write; metadata on the PaymentIntent is left unchanged. Dry-run diff first, `--apply` after owner sign-off. Also check legacy v1 webhook endpoints in Stripe (v2 destinations are empty).
+| Critical test | Result |
+|---|---|
+| Stripe test Checkout: pay link → session with agreed amount and booking metadata; re-click reuses session | PASS |
+| Live Stripe key refused while `AUTOMATION_ENABLED=false`; checkout refused until payment policy approved | PASS |
+| Webhook signature: missing, wrong secret, stale timestamp → 400, nothing stored | PASS |
+| Webhook success → confirmed; guest + management emailed exactly once | PASS |
+| Exact replay → duplicate, no side effects; different event for same session → no-op | PASS |
+| Crash mid-processing → 500 → Stripe retry confirms exactly once | PASS |
+| Declined card → recorded, hold kept; session expired → back to hold or released; async failure → released | PASS |
+| Amount mismatch → not confirmed, flagged in maintenance | PASS |
+| Late payment after expiry → confirmed if free, flagged (no refund) if taken; payment after return-to-hold confirms | PASS |
+| Overlap rejected, back-to-back allowed; **10 concurrent holds → exactly 1 wins** | PASS |
+| Calendar: no source, HTTP 403 feed, empty feed → availability UNKNOWN, holds refused | PASS |
+| Feed failure keeps old blocks; becomes UNKNOWN once stale; own exported bookings not re-imported | PASS |
+| Resend outage → failed → hourly retry delivers once (provider idempotency key = dedupe key); gives up after 5, reported | PASS |
+| Non-allow-listed guest never emailed while automation off | PASS |
+| Welcome email (mocked clock): none at D-3, sent at D-2 with surname/dates/nights/entry code, no duplicate on reruns, Europe/London date across BST | PASS |
+| Unapproved welcome template → not sent, maintenance alert raised | PASS |
+| Entry code never appears in confirmation/management mail | PASS |
+| No refund endpoint; cancelling issues no refund; external refund only recorded | PASS |
+| Import/reconcile: dry run writes nothing; apply links payment, marks past emails historical, **no Stripe or Resend calls**; re-run idempotent; later webhook for the same payment is a no-op; only the welcome email is sent on 28 Dec | PASS |
+| Kill switch: `AUTOMATION_ENABLED=false` stops guest email | PASS |
+| Test hooks (mock clock, fault injection) ignored in live environment | PASS |
+| D1 rollback rehearsal: export → damage → restore → data identical | PASS |
+| Website visual regression: Astro build output identical to `main` | PASS |
 
-### Planned build (once unblocked)
-Separate Worker + D1 (`lsh-booking-api`), cloned TEST environment with Stripe test keys, recipient allow-list, injectable clock for the +2-day welcome trigger, signature/duplicate/retry webhook tests, concurrent-hold tests, calendar-failure tests, refunds disabled in code, daily maintenance checks, D1 export before each migration, `AUTOMATION_ENABLED=false` in live. Test URL, evidence table and pass/fail results will be added here; **none exist yet**.
+**Not yet tested (needs access):** real Stripe test-mode round trip, real Resend delivery, real iCal feeds, deployed URL, Cloudflare cron firing.
 
-### Launch / rollback (unchanged)
-Launch only on written owner approval: secrets → migrations → deploy → flip `AUTOMATION_ENABLED`. Rollback: flag off → `wrangler rollback` → restore D1 export; Pages deployment untouched.
+## 4. Access blockers
+
+1. **Plugins:** Cloudflare, Stripe and Resend plugins were installed, but their tools are not loaded in this session (plugins load at session start). **Start a new session** on this branch to use them. Or allow `api.cloudflare.com`, `api.stripe.com`, `api.resend.com` in the environment's network settings and add tokens as environment secrets.
+2. **Booking Desk:** native export of code/records/templates, supplied privately.
+3. **Calendar:** which feed is authoritative (Travel Chapter/OTA iCal URL), or confirm D1 itself is authoritative (`REQUIRE_EXTERNAL_CALENDAR=false`).
+
+## 5. Owner decisions (not invented)
+
+- Payment policy: only **full upfront** is implemented. The 25% deposit / 6-week balance scheme was proposed, never approved, and is not built.
+- Security-damage deposit and refund policy: not implemented. Refunds stay manual in Stripe.
+- Confirmation and management email wording: seeded as **DRAFTS** (`approved=0`). Owner must approve or replace them.
+- Whether confirmation and management emails for the New Year booking were already sent. This decides `historical_emails` on import.
+
+## 6. Migration and backup
+
+- Schema in `booking-api/migrations/` (`0001_init`, `0002_seed_templates`), applied with `wrangler d1 migrations apply`.
+- Before every live migration: `npm run backup:live` (D1 export to `booking-api/backups/`, gitignored). D1 Time Travel also gives point-in-time restore.
+- New Year payment: `POST /admin/import`, dry run first, then `apply`. No Stripe write, no metadata change, no email. Exact procedure is in `booking-api/README.md`. Also check Stripe for legacy v1 webhook endpoints (v2 destinations are empty) before adding the new endpoint, to avoid two systems reacting to the same payment.
+
+## 7. DNS still to fix (Resend domain status FAILED)
+
+In Cloudflare DNS for `littleslatehouse.co.uk`, set these **DNS-only (grey cloud)** and keep every existing record:
+
+| Type | Name | Value |
+|---|---|---|
+| TXT | `resend._domainkey` | full DKIM public key copied from the Resend dashboard (current record fails; check it isn't truncated) |
+| CNAME | `rsend` | `rsend-apne1.forge.rmta.net` |
+| CNAME | `send` | `send.forge.rmta.net` |
+
+Then click **Verify** in Resend. Confirm the values against the dashboard, which is authoritative.
+
+## 8. Launch and rollback
+
+**Launch order (each step reversible):** deploy TEST → Stripe test-mode round trip + allow-listed email → deploy LIVE with automation OFF → import and reconcile the New Year booking (dry run, then apply) → owner approves templates and policy → **only on explicit written approval**: live Stripe keys, `STRIPE_MODE=live`, `PAYMENT_POLICY=full_upfront`, `AUTOMATION_ENABLED=true`.
+
+**Rollback:** flip `AUTOMATION_ENABLED=false` (immediate stop) → `wrangler rollback` (Worker code) → D1 Time Travel or `backups/*.sql` restore (data) → `wrangler delete` (remove entirely). The Pages site and its deployments are independent and unaffected throughout.

@@ -1,0 +1,16 @@
+{
+  "name": "lsh-booking-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist --env test",
+    "test": "npm run build --silent >/dev/null && node --test --test-concurrency=1 test/*.test.mjs",
+    "dev": "wrangler dev --env test",
+    "migrate:test": "wrangler d1 migrations apply lsh-booking-test --env test --remote",
+    "migrate:live": "wrangler d1 migrations apply lsh-booking --remote",
+    "backup:live": "wrangler d1 export lsh-booking --remote --output backups/lsh-booking-$(date +%Y%m%d-%H%M%S).sql"
+  },
+  "devDependencies": {
+    "wrangler": "4.141.0"
+  }
+}

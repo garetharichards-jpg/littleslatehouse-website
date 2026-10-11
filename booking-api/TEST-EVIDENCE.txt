@@ -1,0 +1,88 @@
+# lsh-booking-api local test run — 2026-10-11T07:07Z
+# Miniflare (workerd) + in-memory D1; all Stripe/Resend/iCal endpoints mocked; fictional data only.
+▶ safety rails
+  ✔ no refund endpoint exists (10.581787ms)
+  ✔ admin endpoints require the admin token (5.408424ms)
+  ✔ cancelling a booking issues no refund and makes no Stripe call (20.869203ms)
+✔ safety rails (629.117535ms)
+▶ live environment lockout
+  ✔ live Stripe key refused while AUTOMATION_ENABLED=false; test hooks ignored in live (480.104725ms)
+  ✔ payment policy must be approved before checkout (455.406954ms)
+✔ live environment lockout (935.906384ms)
+▶ calendar availability fails closed
+  ✔ no calendar source => holds refused, availability unknown (429.676955ms)
+  ✔ blocked (HTTP 403) feed => unknown, not available (452.691052ms)
+  ✔ empty feed => treated as unverified (452.783705ms)
+  ✔ feed failure keeps previous blocks; becomes unknown once stale (473.034129ms)
+  ✔ external calendar nights block holds; own exported UIDs are not re-imported (478.663101ms)
+✔ calendar availability fails closed (2287.477693ms)
+▶ booking conflicts and holds
+  ✔ overlap rejected, back-to-back allowed (22.593945ms)
+  ✔ concurrent overlapping holds: exactly one wins (55.176079ms)
+  ✔ validation: party size and agreed amount required (5.220189ms)
+  ✔ unpaid hold expires and releases nights (45.092216ms)
+✔ booking conflicts and holds (611.330493ms)
+▶ Stripe checkout and webhooks
+  ✔ pay link: wrong token 404; correct token redirects to Stripe; re-click reuses session (28.27296ms)
+  ✔ signature: missing, wrong secret, stale timestamp all rejected (23.982712ms)
+  ✔ live-mode event ignored by test deployment (3.371797ms)
+✔ Stripe checkout and webhooks (503.459368ms)
+▶ payment success, replay and idempotency
+  ✔ completed => confirmed, guest + management emailed once (47.648883ms)
+  ✔ exact replay => acknowledged as duplicate, no extra email (5.102052ms)
+  ✔ different event for the same paid session => no-op (21.283324ms)
+  ✔ confirmed booking pay link does not create another charge (3.89775ms)
+  ✔ refund made manually in Stripe is only recorded (13.387922ms)
+✔ payment success, replay and idempotency (570.015921ms)
+▶ processing failure and Stripe retry
+  ✔ crash mid-processing => 500, then retry confirms exactly once (550.478492ms)
+✔ processing failure and Stripe retry (550.645874ms)
+▶ failed and abandoned payments
+  ✔ declined card is recorded; hold kept so guest can retry (30.20695ms)
+  ✔ session expired within hold => back to hold, guest can pay again; no email (45.998034ms)
+  ✔ session expired after hold ended => released, dates rebookable (38.622805ms)
+  ✔ payment arriving after the booking returned to hold still confirms (70.517813ms)
+  ✔ amount mismatch => not confirmed, flagged for owner (61.443449ms)
+  ✔ late payment after expiry: confirmed if dates free, flagged (no refund) if taken (105.120971ms)
+✔ failed and abandoned payments (822.412012ms)
+▶ email gating, delivery failure and retry
+  ✔ non-allow-listed guest is never emailed while automation is off (584.066322ms)
+  ✔ Resend outage => failed, retried by hourly job, delivered exactly once (591.112147ms)
+  ✔ gives up after 5 attempts and reports it (694.887737ms)
+✔ email gating, delivery failure and retry (1870.423086ms)
+▶ two-day pre-arrival welcome email (mocked clock)
+  ✔ 3 days before: nothing (19.813621ms)
+  ✔ 2 days before: sent once with surname, dates, nights, entry code (26.202788ms)
+  ✔ re-run same day and next day: no duplicate (46.723113ms)
+  ✔ London date is used across BST (late-evening UTC run) (84.956409ms)
+  ✔ unapproved welcome template => not sent, maintenance flags it (631.532288ms)
+✔ two-day pre-arrival welcome email (mocked clock) (1389.293626ms)
+▶ import and reconcile an existing paid booking
+  ✔ dry run (default) writes nothing and calls nothing (25.120263ms)
+  ✔ apply: confirmed, payment linked, no charge, no confirmation email (17.399834ms)
+  ✔ re-running the import creates nothing new (38.645184ms)
+  ✔ a late webhook for the reconciled payment does not re-confirm or email (27.481491ms)
+  ✔ daily runs before 28 Dec send nothing; on 28 Dec only the welcome is sent (68.385347ms)
+  ✔ amount mismatch and conflicting dates are refused (11.525373ms)
+✔ import and reconcile an existing paid booking (674.750492ms)
+▶ kill switch
+  ✔ setting AUTOMATION_ENABLED=false stops guest email immediately (rollback of automation) (1139.503738ms)
+✔ kill switch (1139.683364ms)
+ℹ tests 44
+ℹ suites 12
+ℹ pass 44
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12573.651761
+
+1. apply migrations
+2. seed a fictional confirmed booking
+   before: [{"id":"LSH-TEST-1","status":"confirmed"}]
+3. backup (d1 export)
+4. simulate a bad change
+   damaged: [{"id":"LSH-TEST-1","status":"cancelled"}]
+5. restore: drop tables, re-import backup
+   after:  [{"id":"LSH-TEST-1","status":"confirmed"}]  templates: [{"n":3}]
+ROLLBACK REHEARSAL: PASS
