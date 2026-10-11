@@ -85,7 +85,12 @@ const wr = (args, input) => {
 };
 
 log('\n== Cloudflare account ==');
-log(wr(['whoami']).split('\n').filter((l) => /account|email|Token/i.test(l)).slice(0, 6).join('\n'));
+{
+  const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}`, { headers: { authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}` } });
+  const d = await r.json();
+  if (!d.success) throw new Error('token cannot read the account');
+  log(`account: ${d.result.name}`);
+}
 
 log('\n== D1 lsh-booking-test ==');
 const list = JSON.parse(wr(['d1', 'list', '--json']));
@@ -166,6 +171,23 @@ const api = async (method, path, body) => {
   return { status: r.status, data: await r.json().catch(() => ({})) };
 };
 log('\n== Configure ==');
+const reachable = await fetch(`${url}/health`).then((r) => r.ok).catch(() => false);
+if (!reachable) {
+  // This sandbox cannot reach *.workers.dev yet: configure through D1 instead, then stop.
+  const sq = (v) => `'${String(v).replace(/'/g, "''")}'`;
+  const now = new Date().toISOString();
+  const sql = [];
+  if (has('ICAL_TC_URL')) sql.push(`INSERT INTO calendar_sources (id, kind, url_secret, enabled, allow_empty) VALUES ('travel_chapter','agent','ICAL_TC_URL',1,0) ON CONFLICT(id) DO UPDATE SET kind=excluded.kind, url_secret=excluded.url_secret;`);
+  if (has('ICAL_TEST_OWNER_URL')) sql.push(`INSERT INTO calendar_sources (id, kind, url_secret, enabled, allow_empty) VALUES ('owner_google','owner_publisher','ICAL_OWNER_URL',1,1) ON CONFLICT(id) DO UPDATE SET kind=excluded.kind, url_secret=excluded.url_secret, allow_empty=1;`);
+  if (w) sql.push(`INSERT INTO email_templates (name, subject, html, text, approved, updated_at) VALUES ('welcome', ${sq(w.subject)}, ${sq(w.html)}, ${sq(w.text)}, ${w.ok ? 1 : 0}, ${sq(now)}) ON CONFLICT(name) DO UPDATE SET subject=excluded.subject, html=excluded.html, text=excluded.text, approved=excluded.approved, updated_at=excluded.updated_at;`);
+  const file = `${ROOT}.deploy-config.sql`;
+  writeFileSync(file, sql.join('\n')); chmodSync(file, 0o600);
+  try { wr(['d1', 'execute', 'lsh-booking-test', '--env', 'test', '--remote', '--file', file]); } finally { writeFileSync(file, ''); }
+  log(`configured via D1 (sources: ${sql.length - (w ? 1 : 0)}, welcome template: ${w ? (w.ok ? 'approved' : 'UNAPPROVED') : 'none'})`);
+  log(`\n*.workers.dev is not reachable from this environment, so the first sync and status check were skipped.`);
+  log(`TEST URL: ${url}`);
+  process.exit(0);
+}
 if (has('ICAL_TC_URL')) log('travel_chapter source:', (await api('PUT', '/admin/calendar-sources/travel_chapter', { kind: 'agent', url_secret: 'ICAL_TC_URL' })).status);
 if (has('ICAL_TEST_OWNER_URL')) log('owner_google (TEST calendar) source:', (await api('PUT', '/admin/calendar-sources/owner_google', { kind: 'owner_publisher', url_secret: 'ICAL_OWNER_URL', allow_empty: true })).status);
 if (w) log('welcome template:', (await api('PUT', '/admin/templates/welcome', { subject: w.subject, html: w.html, text: w.text, approved: w.ok })).status, w.ok ? 'approved' : 'UNAPPROVED (incomplete)');

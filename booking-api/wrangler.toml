@@ -77,5 +77,5 @@ ALLOW_TEST_FAULTS = "true"
 [[env.test.d1_databases]]
 binding = "DB"
 database_name = "lsh-booking-test"
-database_id = "REPLACE_AFTER_wrangler_d1_create"
+database_id = "8b294f04-62e0-4422-8384-90be115cd1b6"
 migrations_dir = "migrations"

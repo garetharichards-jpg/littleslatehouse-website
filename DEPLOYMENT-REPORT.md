@@ -2,7 +2,38 @@
 
 Updated: 2026-10-11 (verified handoff + owner records audit) · Branch: `ccr-175a0349-1giy42`
 
-**Verdict: ready for a TEST deployment once access is granted; NOT ready for production automation.**
+**Verdict: TEST environment DEPLOYED and passing live checks; NOT ready for production automation.**
+
+## 0. Live TEST deployment (2026-10-11)
+
+**Test URL:** https://lsh-booking-api-test.garetharichards.workers.dev. Separate Worker, separate D1 `lsh-booking-test`, Stripe **test mode**, fake entrance code, email allow-listed to the owner's own inboxes, `AUTOMATION_ENABLED=false`, `CAPTURE_MODE=manual`, `PUBLISH_MODE=tc_portal`.
+
+| Live check against real services | Result |
+|---|---|
+| D1 created, both migrations applied (incl. external-block trigger) | PASS |
+| Secrets pushed by name only; Stripe TEST webhook endpoint created | PASS |
+| **Real Travel Chapter feed synced:** 8 blocks, 0 anomalies | PASS. See reconciliation below. |
+| Disposable test calendar feed (`ICAL_TEST_OWNER_URL`) | **FAIL: HTTP 404.** URL needs re-checking. Source disabled in TEST meanwhile. |
+| Quote → pay link → **real Stripe test Checkout Session** created (303 to checkout.stripe.com) | PASS |
+| Test card authorised (manual capture) → **real signed webhook** → booking `authorized`, nothing captured | PASS |
+| Forged webhook (bad signature) rejected | PASS (400) |
+| Capture refused until the agent check; owner-verified confirm → **captured once** (Stripe test PI `succeeded`); later `payment_intent.succeeded` webhook did not double-process | PASS |
+| Coordinated cancellation: dates still blocked while pending, released only after acknowledgment; no refund | PASS |
+| Welcome scheduling on simulated clock: none at D-3; attempted at D-2; one record, re-runs don't duplicate | PASS |
+| Email delivery (Resend) | **PENDING:** domain verification in progress (records added and resolving publicly); queued emails retry automatically |
+| Public site / Pages projects | Untouched |
+
+**Travel Chapter feed vs. owner ledger (dates only):**
+- 25–31 Oct, 31 Oct–7 Nov, 16–30 Dec, 30 Dec–3 Jan (New Year owner booking), 23–30 Jul 2027 and 30 Jul–6 Aug 2027 all match.
+- **10–14 Oct 2026** is in the feed but missing from the ledger. Gmail shows a matching "Stay" event, so it's a current stay.
+- **16–19 Oct 2026** is in the feed but in neither the ledger nor Gmail. **Owner to check it in the Travel Chapter portal.**
+- **2–9 Apr 2027 proposed owner hold is NOT blocked in Travel Chapter.** If that guest accepted, those dates are open on the agent side.
+
+**Cloudflare facts verified via API:**
+- **`www.littleslatehouse.co.uk` is served by Pages project `little-slate-house`** (direct upload, no git link, last production deploy 21 Jun 2026 from commit `692ec86`). The git-connected `littleslatehouse-website` only serves its `.pages.dev` address. Merging this branch therefore does **not** change the live site.
+- No DNS record exists for the bare domain `littleslatehouse.co.uk`, only `www`, `go` and `n8n`, so the bare domain does not resolve.
+- Resend records added (DNS-only); existing records untouched.
+
 Code and tests are complete locally (72/72 passing, rollback rehearsal passing, public site build byte-identical to `main`).
 Nothing is deployed yet. This session has no Cloudflare API access, no Gmail access and no write access to Google Calendar.
 Production is untouched: no live charge, refund, confirmation, calendar write or deletion, and no customer email.
@@ -15,7 +46,7 @@ This repo is public. Guest names, contact addresses, booking references, payment
 
 | Item | Finding | How verified |
 |---|---|---|
-| Cloudflare Pages project | `littleslatehouse-website` on domain `littleslatehouse.co.uk` (active 11 Oct 2026), deployed from this repo; account ID supplied by owner | Owner handoff. Could not re-check: `api.cloudflare.com` is denied by this sandbox, and the Cloudflare connector shows no Pages/DNS and does not identify its account. |
+| Cloudflare Pages project | **Corrected:** live `www` is served by `little-slate-house` (direct upload). `littleslatehouse-website` (git-connected) only serves `.pages.dev`. | Cloudflare API (§0) |
 | Public site source | Astro 6 static site, 6 pages. Branch build is **byte-identical to `main`** (24 files) | `booking-api/scripts/site-regression.sh` |
 | Owner's dedicated Google calendar | "Little Slate House — Bookings", Europe/London. **No events at all** (2024 → 2027); last changed 9 Aug 2026 (the day its feed was shared). Connected permission: **reader** | Google Calendar connector |
 | **Why that calendar is empty** | Bookings exist only as **12 "Stay at Little Slate House" events that Gmail auto-created on the owner's *primary* calendar** from booking emails (Aug 2026 → Aug 2027). They are marked *free/transparent*, are not on the dedicated calendar, and so are **not in the feed Travel Chapter subscribes to**. Their all-day spans include the checkout day (e.g. a stay ending 3 Jan is shown to 4 Jan), so they must not be read as checkout-exclusive iCal blocks. **The empty calendar is not evidence of availability.** | Google Calendar connector (read-only) |

@@ -6,3 +6,4 @@ dist/
 imports/*.json
 !imports/*.example.json
 .admin-token.*
+.deploy-config.sql
