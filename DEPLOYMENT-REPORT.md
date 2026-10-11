@@ -20,7 +20,8 @@ Updated: 2026-10-11 (verified handoff + owner records audit) · Branch: `ccr-175
 | Capture refused until the agent check; owner-verified confirm → **captured once** (Stripe test PI `succeeded`); later `payment_intent.succeeded` webhook did not double-process | PASS |
 | Coordinated cancellation: dates still blocked while pending, released only after acknowledgment; no refund | PASS |
 | Welcome scheduling on simulated clock: none at D-3; attempted at D-2; one record, re-runs don't duplicate | PASS |
-| Email delivery (Resend) | **PENDING:** domain verification in progress (records added and resolving publicly); queued emails retry automatically |
+| Resend domain `littleslatehouse.co.uk` | **VERIFIED** (DKIM + both CNAMEs) after adding the records |
+| Email delivery + retry | PASS: emails that failed while the domain was unverified were retried and **delivered once each** to the owner's test inbox (owner alert, guest authorisation and confirmation, management new-booking and cancellation, welcome, maintenance). TEST used `[TEST]` stand-in wording; real templates still need owner approval. |
 | Public site / Pages projects | Untouched |
 
 **Travel Chapter feed vs. owner ledger (dates only):**
