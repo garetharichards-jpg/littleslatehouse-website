@@ -9,7 +9,8 @@ Separate Cloudflare Worker + D1 for Little Slate House direct bookings. It does 
 - immediate capture in live is refused even when automation is on (`ALLOW_IMMEDIATE_CAPTURE_LIVE=false`),
 - no email reaches anyone not on `EMAIL_ALLOWLIST`,
 - nothing is ever sent to Travel Chapter automatically (the system writes drafts for the owner),
-- there is no refund code path,
+- there is no refund code path, and direct damage deposits/waivers are refused outright (the agent's £300 deposit / £35 waiver scheme does not apply to direct bookings),
+- discounts are refused unless they match an owner-approved rule in `APPROVED_DISCOUNT_RULES` (empty by default),
 - webhooks are still verified and recorded, so no payment is lost.
 
 Guest data, payment IDs, agent references, feed URLs, OAuth tokens and the entry code live only in D1 or Worker secrets, never in this public repo.
@@ -71,13 +72,14 @@ Agent booking references (from Travel Chapter booking emails) can be attached to
 
 ## Email
 
-Resend, with a unique dedupe key per message (also sent as Resend's `Idempotency-Key`). Failures retry, up to 5 attempts, then get reported. Only **approved** templates send. Seeded: `maintenance_alert` and `owner_authorization` (internal, approved); `confirmation`, `management_new_booking` and `authorization_received` (**drafts**). `welcome` must be pasted in from the existing saved template. The welcome email goes two days before arrival (Europe/London), and the entry code comes only from the `ENTRY_CODE` secret.
+Resend, with a unique dedupe key per message (also sent as Resend's `Idempotency-Key`). Failures retry, up to 5 attempts, then get reported. Only **approved** templates send. Seeded: `maintenance_alert` and `owner_authorization` (internal, approved); `confirmation`, `management_new_booking`, `management_cancellation` (cleaner/management notice after a released cancellation) and `authorization_received` (**drafts**). `welcome` must be pasted in from the existing saved template. The welcome email goes two days before arrival (Europe/London), and the entry code comes only from the `ENTRY_CODE` secret.
 
 ## Tests (local, no accounts needed)
 
 ```sh
-cd booking-api && npm ci && npm test            # 65 tests: Miniflare + in-memory D1; Stripe, Resend, Google and both feeds mocked
+cd booking-api && npm ci && npm test            # 71 tests: Miniflare + in-memory D1; Stripe, Resend, Google and both feeds mocked
 ./scripts/rollback-rehearsal.sh                  # D1 export → damage → restore, via wrangler local D1
+./scripts/site-regression.sh                     # public site build must be byte-identical to main
 ```
 The latest output is in `TEST-EVIDENCE.txt`.
 
@@ -114,17 +116,22 @@ Stripe (**test mode**) webhook endpoint `…/webhooks/stripe`, events:
 ## Live deployment (automation OFF) and the existing New Year booking
 
 Same steps without `--env test`, with `npm run backup:live` before every migration. Then reconcile the existing paid owner booking.
-It is already held by Travel Chapter as an owner booking, so it is **linked, not re-published**:
+It is already held by Travel Chapter as an owner booking, so it is **linked, not re-published**. Its welcome is already scheduled in Gmail, so it is recorded as handled elsewhere:
 ```sh
 curl -X POST $API/admin/import -H "$H" -d '{
   "booking": {"guest_name":"…","guest_surname":"…","guest_email":"…","payer_name":"…",
               "party_size":5,"arrival":"2026-12-30","departure":"2027-01-03","amount_pence":90000},
   "payment": {"payment_intent_id":"pi_…","amount_pence":90000,"livemode":true},
   "agent_ref": "<Travel Chapter owner-booking ref>",
-  "historical_emails": ["confirmation","management_new_booking"]
+  "historical_emails": [],
+  "external_emails": [{"template":"welcome","note":"personalised welcome scheduled in owner Gmail","scheduled_for":"2026-12-27"}],
+  "prior_correspondence": ["payment-link email sent to guest 2026-10-04"]
 }'      # dry run: review the plan; then resend with "apply": true
 ```
-It never calls Stripe, Google or Resend. List only emails that were genuinely sent already. Departure 30 Dec of the preceding agent booking and arrival 30 Dec are back-to-back and allowed.
+- It never calls Stripe, Google or Resend.
+- This system will never send a welcome or confirmation for this booking.
+- The reconciler flags that the Gmail-scheduled date (27 Dec) differs from the two-day policy (28 Dec) until the owner decides.
+- The agent's adjacent booking ending 30 Dec and this one starting 30 Dec are back-to-back and allowed.
 
 ## Activation (requires the owner's explicit written approval)
 

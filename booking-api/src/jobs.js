@@ -125,7 +125,7 @@ export async function reconcile(env, db, now, fetcher = fetch) {
 
   const tpl = await db.prepare('SELECT name FROM email_templates WHERE approved = 1').all();
   const approved = new Set(tpl.results.map((t) => t.name));
-  for (const n of ['confirmation', 'management_new_booking', 'welcome', 'authorization_received']) {
+  for (const n of ['confirmation', 'management_new_booking', 'management_cancellation', 'welcome', 'authorization_received']) {
     if (!approved.has(n)) issues.push(`Template '${n}' is missing or not approved`);
   }
 
@@ -142,8 +142,19 @@ export async function reconcile(env, db, now, fetcher = fetch) {
 
   const noWelcome = await db.prepare(
     `SELECT id, arrival FROM bookings b WHERE status = 'confirmed' AND arrival > ? AND arrival <= ?
-     AND NOT EXISTS (SELECT 1 FROM email_log e WHERE e.dedupe_key = 'welcome:' || b.id AND e.status IN ('sent','historical'))`,
+     AND NOT EXISTS (SELECT 1 FROM email_log e WHERE e.dedupe_key = 'welcome:' || b.id AND e.status IN ('sent','historical','suppressed'))`,
   ).bind(today, addDays(today, 2)).all();
+  const external = await db.prepare(
+    `SELECT e.booking_id, e.note, b.arrival FROM email_log e JOIN bookings b ON b.id = e.booking_id
+     WHERE e.template = 'welcome' AND e.status = 'suppressed' AND b.status = 'confirmed' AND b.departure >= ?`,
+  ).bind(today).all();
+  for (const w of external.results) {
+    const when = /scheduled_for=(\d{4}-\d{2}-\d{2})/.exec(w.note || '')?.[1];
+    const policy = addDays(w.arrival, -2); // saved policy: two days before arrival
+    if (when && when !== policy) {
+      issues.push(`Welcome for ${w.booking_id} is scheduled outside this system for ${when}; policy date is ${policy}. Owner approval needed.`);
+    }
+  }
   for (const b of noWelcome.results) {
     issues.push(`Booking ${b.id} arrives ${b.arrival} and has no welcome email sent${automationEnabled(env) ? '' : ' (automation disabled)'}`);
   }

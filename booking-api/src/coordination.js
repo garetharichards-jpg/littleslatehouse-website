@@ -1,8 +1,9 @@
 // Owner actions on the pending-change queue. Every release of dates requires a recorded acknowledgment
 // of the coordinated change with Travel Chapter (both systems changed within the same hour).
 
-import { getBooking, releaseNights, transition } from './bookings.js';
+import { bookingVars, getBooking, releaseNights, transition } from './bookings.js';
 import { getChange, setChangeStatus } from './changes.js';
+import { sendEmail } from './email.js';
 import { withdrawBooking } from './google.js';
 import { HttpError, audit, iso } from './util.js';
 
@@ -38,6 +39,13 @@ export async function completeChange(env, db, now, id, body, fetcher = fetch) {
       // 'released' = done on our side; the reconciler marks it 'verified' once Travel Chapter's feed drops the block.
       await setChangeStatus(db, now, id, 'released', { acknowledgment: ack });
       await audit(db, now, 'admin', 'coordinated_cancel_released', c.booking_id, { change: id, arrival: b?.arrival });
+      if (env.MANAGEMENT_EMAIL && b) {
+        // Cleaner/management coordination: only after the release is actually done.
+        await sendEmail(env, db, now, {
+          bookingId: b.id, template: 'management_cancellation', recipient: env.MANAGEMENT_EMAIL,
+          dedupeKey: `management_cancellation:${b.id}`, vars: await bookingVars(env, b, 'management_cancellation'),
+        }, fetcher);
+      }
       break;
     }
     case 'external_missing':

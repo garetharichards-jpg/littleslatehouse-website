@@ -47,4 +47,10 @@ Calendar propagation: {{propagation}}. Confirm the dates are blocked on Travel C
 
 DRAFT: owner to supply wording. We have received your payment authorisation for {{arrival_date}} to {{departure_date}}. Your card will be charged once we confirm the dates.
 ',
+ 0, '2026-10-11T00:00:00Z'),
+('management_cancellation',
+ 'DRAFT Booking released: {{booking_id}} ({{arrival_date}} to {{departure_date}})',
+ '<p>DRAFT: owner to supply wording. Booking {{booking_id}} for {{arrival_date}} to {{departure_date}} has been cancelled and the dates released after coordination with Travel Chapter. Please cancel any cleaning scheduled for this stay.</p>',
+ 'DRAFT: owner to supply wording. Booking {{booking_id}} for {{arrival_date}} to {{departure_date}} has been cancelled and the dates released after coordination with Travel Chapter. Please cancel any cleaning scheduled for this stay.
+',
  0, '2026-10-11T00:00:00Z');

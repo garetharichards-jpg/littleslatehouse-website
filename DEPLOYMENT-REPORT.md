@@ -1,85 +1,141 @@
-# Little Slate House — Booking System Deployment Report
+# Little Slate House — Deployment Readiness Report
 
-Updated: 2026-10-11 (Travel Chapter two-way iCal update applied) · Branch: `ccr-175a0349-1giy42`
+Updated: 2026-10-11 (verified handoff) · Branch: `ccr-175a0349-1giy42`
 
-**Status:** booking backend redesigned around the Travel Chapter two-way iCal arrangement, and tested **locally**. It is **not deployed**: Cloudflare deploy access is still missing. Production is untouched: no live booking changed, no email sent, no charge or refund, no calendar written.
+**Verdict: ready for a TEST deployment once access is granted; NOT ready for production automation.**
+Code and tests are complete locally (71/71 passing, rollback rehearsal passing, public site build byte-identical to `main`).
+Nothing is deployed yet. This session has no Cloudflare API access, no Gmail access and no write access to Google Calendar.
+Production is untouched: no live charge, refund, confirmation, calendar write or deletion, and no customer email.
 
-This repo is public. Guest names, payment IDs, agent booking references, contact addresses, feed URLs and the entry code are deliberately not recorded here.
+This repo is public. Guest names, contact addresses, booking references, payment IDs, account IDs, feed URLs and the entrance code are deliberately left out of it.
 
-## 1. Project and sources
+---
 
-| Item | Status |
+## 1. Found and verified
+
+| Item | Finding | How verified |
+|---|---|---|
+| Cloudflare Pages project | `littleslatehouse-website` on domain `littleslatehouse.co.uk` (active 11 Oct 2026), deployed from this repo; account ID supplied by owner | Owner handoff. Could not re-check: `api.cloudflare.com` is denied by this sandbox, and the Cloudflare connector shows no Pages/DNS and does not identify its account. |
+| Public site source | Astro 6 static site, 6 pages. Branch build is **byte-identical to `main`** (24 files) | `booking-api/scripts/site-regression.sh` |
+| Owner's dedicated Google calendar | "Little Slate House — Bookings", Europe/London. **No events at all** (2024 → 2027); last changed 9 Aug 2026 (the day its feed was shared). Connected permission: **reader** | Google Calendar connector |
+| **Why that calendar is empty** | Bookings exist only as **12 "Stay at Little Slate House" events that Gmail auto-created on the owner's *primary* calendar** from booking emails (Aug 2026 → Aug 2027). They are marked *free/transparent*, are not on the dedicated calendar, and so are **not in the feed Travel Chapter subscribes to**. Their all-day spans include the checkout day (e.g. a stay ending 3 Jan is shown to 4 Jan), so they must not be read as checkout-exclusive iCal blocks. **The empty calendar is not evidence of availability.** | Google Calendar connector (read-only) |
+| Stripe | Connector reaches the "Little Slate House" account in **test mode only** (no live access from here). No test webhook endpoints. | Stripe connector |
+| Resend | Domain `littleslatehouse.co.uk` status **failed** (all three records). 0 webhooks. | Resend connector |
+| Feed URL exposure | No Google or Travel Chapter feed URLs anywhere in the repo or its git history | `git log --all -p` scan |
+| Booking Desk ChatGPT Site | **Not reachable** from this environment (DNS blocked by sandbox). Source, schema, records and templates not obtained. | curl / WebFetch |
+| Gmail | **No Gmail connector in this session.** Feed URLs, welcome wording and drafts could not be read or edited. | Connector list |
+
+## 2. Implemented and working (locally)
+
+`booking-api/`: a separate Cloudflare Worker + D1 database. The Pages site is not modified, apart from one line described at the end of this section. Runbook: `booking-api/README.md`.
+
+- **Availability:**
+  - The Travel Chapter feed is an authoritative blocking input.
+  - The owner's dedicated Google calendar is the publisher feed, with one stable event per direct booking.
+  - Echoes of our own bookings are linked as confirmation, not treated as conflicts.
+  - Disappearing blocks are never released automatically. Ghosts and amendments are flagged.
+  - Fail-closed on missing, empty or stale feeds. The agent feed is re-pulled before every quote and every Checkout.
+- **Payments:**
+  - Stripe Checkout with **authorisation only** (`capture_method=manual`). The owner captures after Travel Chapter shows the block, or after verifying with them.
+  - Signature-verified, idempotent webhooks.
+  - Live immediate capture refused; live Stripe writes refused while `AUTOMATION_ENABLED=false`.
+- **Price validation:** the agreed total is required. Discounts (10% direct / 12% returning) are **refused unless an explicit rule is approved** in `APPROVED_DISCOUNT_RULES`, which is empty by default. Totals must match the rule exactly.
+- **Damage deposit:** direct deposits and waivers are **refused**. The agent's £300 deposit / £35 waiver scheme is not applied. No refund code path exists.
+- **Cancellations and amendments:** a pending coordinated-change queue with an agreed time and an acknowledgment. It produces a draft message for Travel Chapter's iCal cancellations team (never sent automatically). Dates stay blocked until both sides are done, then verified against the agent feed.
+- **Email:**
+  - Resend with per-message dedupe, retries and allow-list gating.
+  - Management notices on new bookings and on released cancellations.
+  - Welcome email two days before arrival in Europe/London time; the entrance code comes from a Worker secret only.
+- **Historical bookings:** dry-run-first import that links to the agent's block and records the payment as reconciled. It can mark emails as **already sent** or as **handled outside this system** (e.g. the welcome already scheduled in Gmail), so they are never generated again. Prior correspondence is kept in the audit log.
+- **Operations:** cron every 30 minutes for feeds and retries; daily reconciler and owner alert; D1 backup and restore; kill switch.
+- **Site safety:** Tailwind v4 was scanning `booking-api/` and adding one unused CSS rule to the public site. One line in `src/styles/global.css` (`@source not "../../booking-api";`) restores a byte-identical site build.
+
+## 3. Tests: 71 passed, 0 failed (+ rollback rehearsal PASS, site regression PASS)
+
+Full output: `booking-api/TEST-EVIDENCE.txt`. All runs are local (Miniflare/workerd, in-memory D1) with Stripe, Resend, Google Calendar and both feeds **mocked**, using fictional data.
+
+| # | Requested area | Covered by | Result |
+|---|---|---|---|
+| 1 | Enquiry and price validation | agreed total required; party size ≤ 6; unapproved discount refused; approved rule must match exactly | PASS |
+| 2 | Agent and direct conflicts | agent booking blocks quote; concurrent holds (1 of 10 wins); overlap race before Checkout and after authorisation; back-to-back allowed | PASS |
+| 3 | Google write and publishing | one stable event per booking, no guest data; own events recognised; Google outage → nothing released | PASS (mocked) |
+| 4 | Travel Chapter feed and 24h delay | pending at 23h, overdue alert at 27h, cleared on echo; stale/empty/failed feeds fail closed; London timezone conversion | PASS (mocked) |
+| 5 | Amendments, cancellations, ghosts | missing → still blocked; transient omission; ghost (same/new UID); amendment keeps old dates; coordinated cancel → verified | PASS |
+| 6 | Stripe TEST Checkout, signatures, replay | manual capture; bad/stale signatures rejected; exact replay = duplicate; crash → retry once; owner capture idempotent | PASS (mocked) |
+| 7 | Resend delivery and retries, test recipients | allow-list gate; outage → retry → delivered once; give-up after 5 → reported | PASS (mocked) |
+| 8 | Cleaner and management notices | new-booking + cancellation notices to test address only; real address blocked while automation off | PASS |
+| 9 | Pre-arrival scheduling, timezone, duplicates | D-3 none / D-2 sent once; BST late-evening run; Gmail-scheduled welcome never duplicated, 27 vs 28 Dec flagged | PASS |
+| 10 | Damage deposit, no live refunds | deposit/waiver refused; single accommodation line in Checkout; no refund endpoints | PASS |
+| 11 | Backups, health checks, rollback | daily reconciler issues; D1 export → damage → restore rehearsal | PASS |
+| 12 | Public website regression | build byte-identical to `main` | PASS |
+
+**Not yet tested against real services (blocked by access):** Cloudflare deploy and cron, real D1, real Google Calendar write, real Travel Chapter feed, Stripe test-mode round trip through a deployed URL, Resend real delivery (domain not verified).
+
+## 4. Credentials still to configure
+
+Never in chat or the repo.
+
+**A. For this Claude environment** (so I can deploy). In the cloud environment settings (environment menu in the session title bar → Edit):
+- Add **network secrets / environment variables** `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+- Add `api.cloudflare.com` under **Allowed domains**, keeping "Allow package managers" ticked.
+- Start a **new session** afterwards; secrets are picked up at session start.
+
+Scoped token (Cloudflare dashboard → My Profile → API Tokens → Create custom token):
+
+| Scope | Permission | Why |
+|---|---|---|
+| Account | Workers Scripts: **Edit** | deploy the Worker and set its secrets |
+| Account | D1: **Edit** | create the databases and run migrations, backups and restores |
+| Account | Cloudflare Pages: **Read** | confirm the live project and deployments (no changes) |
+| Account | Account Settings: **Read** | wrangler account lookup |
+| Zone `littleslatehouse.co.uk` | DNS: **Edit** | add the three Resend records only (or **Read**, if you prefer to add them yourself) |
+| Account resources | this account only | |
+
+**B. Worker secrets** (set with `wrangler secret put`, separately for TEST and LIVE):
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (TEST: `sk_test_…`)
+- `RESEND_API_KEY`
+- `ADMIN_TOKEN` (32+ random characters)
+- `ENTRY_CODE`
+- `MANAGEMENT_EMAIL`, `MAINTENANCE_EMAIL`, `EMAIL_ALLOWLIST` (TEST: your own test inboxes only), `MANAGEMENT_CONTACT_TEXT`
+- `ICAL_TC_URL` (Travel Chapter TABs feed from the 10 Aug email) and `ICAL_OWNER_URL` (the existing dedicated Google feed from the 9 Aug email). **Leave that URL unchanged.**
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `GOOGLE_CALENDAR_ID`: an OAuth client authorised by the **calendar's owner account** with scope `https://www.googleapis.com/auth/calendar.events`. Generating a refresh token does not alter the calendar or its private ICS URL. For TEST, `GOOGLE_CALENDAR_ID` and `ICAL_OWNER_URL` must point at the **disposable test calendar**.
+
+**C. Owner-side setup this session cannot do:**
+1. Create a disposable Google calendar (e.g. "LSH TEST – do not share"), **never shared with Travel Chapter**. The connector here has no create-calendar or write permission.
+2. Copy both feed URLs from Gmail straight into the secrets above. There is no Gmail access here.
+3. Export the welcome wording (3 Sep 2026 message / Booking Desk template) into `welcome.json` for `PUT /admin/templates/welcome`. Keep the entrance code as `{{entry_code}}` only.
+
+## 5. Decisions needing your approval
+
+1. **New Year welcome date:** Gmail has it scheduled for **27 Dec**; the saved policy implies **28 Dec**. Keep, move, or cancel and let the system send it? Until you decide, the system will **not** send any welcome for this booking and will keep flagging it.
+2. **New Year confirmation:** no post-payment confirmation was found as sent. Send one manually, or none? The system will not generate one.
+3. **New Year management notice:** was cleaning or management already told about 30 Dec–3 Jan? This decides whether the import marks it historical.
+4. **Existing bookings not on the dedicated calendar:** the 12 Gmail-detected stays include agent and owner bookings. Should the owner's *direct* bookings be added to the dedicated calendar? Do this only after Travel Chapter answers the duplicate question (§6), because publishing them could create duplicate owner bookings in TABs.
+5. **Discount rules:** approve exact rules (e.g. `{"direct10":10,"returning12":12}`) and eligibility, or keep discounts manual.
+6. **Direct damage deposit:** remains disabled. Approve a policy separately if wanted.
+7. **Draft templates:** approve or replace `confirmation`, `management_new_booking`, `management_cancellation`, `authorization_received`.
+8. **Go-live operating model:** authorise-then-capture after Travel Chapter confirms (recommended until real-time cross-channel confirmation exists).
+
+## 6. Blocked by missing access (with owner action)
+
+| Blocked item | Unblock |
 |---|---|
-| Public site | `https://www.littleslatehouse.co.uk/`: Astro 6 static site in this repo. **Unchanged** (build output byte-identical to `main`). |
-| Cloudflare Pages project | **Unverified** (`littleslatehouse-website` vs `little-slate-house`). The Cloudflare connector sees an account with 0 Workers and 0 D1 databases, and has no Pages, DNS or deploy tools. |
-| Booking Desk (ChatGPT Site) | **Inaccessible** from this sandbox. **Native Site export requested**; not silently rebuilt. |
-| Owner's dedicated Google calendar ("Little Slate House — Bookings", Europe/London) | Found through the Google Calendar connector. **It has no events at all from June 2026 to December 2027** (last updated 9 Aug 2026). So Travel Chapter currently receives **no owner blocks** from it. The connector has **reader** access only; the Worker needs its own write credentials. |
-| Travel Chapter TABs feed | Not accessible here (the URL is in the owner's Gmail, which isn't connected). The feed must be supplied as the `ICAL_TC_URL` secret. |
-| Two-way sync | **Not proven complete.** Travel Chapter asked the owner to confirm the link had been added before they would add the owner feed. Get written confirmation from Travel Chapter that they import the owner Google feed. |
-| Feed URL exposure | Repo and full git history scanned: no Google or Travel Chapter feed URLs present. |
-| New backend | `booking-api/` (Worker `lsh-booking-api` + D1; separate `-test` Worker + D1). No test URL yet. |
+| Deploy TEST Worker + D1, test URL, cron | §4A token + `api.cloudflare.com` allowed, new session |
+| Confirm live Pages project and root/www DNS | same token (Pages Read, DNS Read) |
+| Resend domain verification | add the §7 DNS records (token with DNS Edit, or by hand), then Verify |
+| Feed URLs, welcome wording, Travel Chapter and management drafts | no Gmail connector; owner copies URLs into secrets and exports the welcome |
+| Google write + disposable test calendar | owner OAuth (§4B) and owner-created test calendar (§4C) |
+| Booking Desk export | owner uses the Site's own export, if it has one, and shares it privately. If none exists, see below. |
+| Travel Chapter confirmation | owner sends the existing draft (see below) |
 
-## 2. What changed for Travel Chapter (summary)
+**Booking Desk: reuse vs. new.** Without the export, nothing from the Booking Desk is reused in code. The welcome template is reused as content once exported. Records are re-entered through the dry-run import. Workflow, schema and logic are a new implementation in `booking-api/` and cover holds, payments, calendars, notifications and the welcome email. If the export arrives, compare its records with the import list and its templates with the seeded drafts.
 
-- **Two origins:** the Travel Chapter feed is an authoritative blocking input. The owner Google calendar is the publisher Travel Chapter subscribes to; direct bookings are written to it through the Google Calendar API with one stable event per booking.
-- **Feed loop avoided:** our own Google events are recognised by UID. Travel Chapter's re-export of our booking (exact dates) is **linked** as propagation confirmation, not treated as a new booking.
-- **Never release on disappearance:** missing blocks stay blocked. Ghosts and amendments are flagged. Every release needs an owner-recorded acknowledgment of the coordinated change.
-- **24h lag:** no irreversible guarantee before the agent shows the block. The default is **deferred authorisation**: the card is authorised at Checkout, the block is published, the agent echo or the owner's verification follows, and only then does the owner confirm and capture. The live config refuses immediate capture.
-- **Cancellations:** pending coordinated-change queue with an agreed time and a draft message for the agent's iCal cancellations team (never sent automatically). Dates stay blocked until both sides are done, then verified against the agent feed.
-- **Checks before money moves:** the agent feed is re-pulled before every quote and every Checkout. The daily reconciler alerts on staleness, overlaps, ghosts, propagation pending or overdue, cancelled bookings still showing, duplicates and expiring authorisations.
+**Question to add to the existing draft to Travel Chapter** (owner to add and send; not sent by me):
+> "If our dedicated Google Calendar sends a blocked date into TABs, could that create a duplicate owner booking when the same reservation is already registered in your system?"
 
-The full runbook is in `booking-api/README.md`.
+Also ask Travel Chapter to confirm whether the owner Google feed has been added on their side (two-way sync complete) and how to test safely. Drafts to Travel Chapter and to management stay unsent until you approve.
 
-## 3. Test evidence
-
-Local runs: Miniflare/workerd + in-memory D1, with Stripe, Resend, Google Calendar and both feeds mocked. Fictional data only. Full output: `booking-api/TEST-EVIDENCE.txt`. **65/65 pass; D1 rollback rehearsal passes; website build identical.**
-
-| Critical scenario | Result |
-|---|---|
-| Deferred authorisation: Checkout `capture_method=manual`; authorised → published to Google → owner alerted, guest **not** told "confirmed" | PASS |
-| Owner confirmation refused until agent echo, unless owner states they verified with the agent; capture once (idempotency key) → confirmed + emails once | PASS |
-| Live immediate capture refused even with automation on; live key refused while automation off | PASS |
-| 24h lag: pending at 23h (no false alarm), `overdue` + alert at 27h, cleared when the agent feed shows the block | PASS |
-| Booking created on the agent channel blocks a direct quote | PASS |
-| Overlap race: agent booking lands after the quote → pay link refuses Checkout; after authorisation → CRITICAL alert, confirmation blocked | PASS |
-| Back-to-back with agent booking (checkout-exclusive DTEND) allowed; true overlap refused | PASS |
-| Missed fetch keeps blocks; empty agent feed = unverified; empty owner feed allowed; stale → unknown | PASS |
-| Block disappears → `missing`, still blocked, needs acknowledged release | PASS |
-| Transient omission (block returns) → item closes itself | PASS |
-| Ghost: released block reappears (same UID, or same dates with new UID) → blocked + flagged, not a new booking | PASS |
-| Agent amendment keeps old dates blocked until coordinated | PASS |
-| Coordinated cancellation: pending (still blocked) → agreed time → release (Google removed) → still blocked by agent copy → verified when the agent drops it → bookable | PASS |
-| Agent still showing a cancelled booking >26h → reported; Google outage during release → nothing released | PASS |
-| Cancelled booking's dates reappearing on agent feed → ghost + overlap flagged | PASS |
-| Authorisation lapses on published dates → coordinated release, not freed | PASS |
-| Existing New Year owner booking: links to matching agent block, **not re-published**, no Stripe/Google/email calls; re-run and re-sync are no-ops; partial overlap refused | PASS |
-| Feed URLs never stored in D1, status output or errors; raw URL refused as source config | PASS |
-| Timed DTSTART/DTEND converted to Europe/London dates | PASS |
-| Earlier suite (44): webhook signature/replay/retry, concurrent holds, email dedupe/retry/allow-list, welcome email at D-2 with mocked clock, no refund path, kill switch, test hooks ignored in live | PASS |
-| D1 backup → damage → restore rehearsal (applies the real migrations, incl. the blocking trigger) | PASS |
-
-**Not yet tested (needs access):** real Travel Chapter feed, real Google Calendar write, real Stripe test-mode round trip, real Resend delivery, deployed cron.
-
-## 4. Access blockers and owner actions
-
-1. **Cloudflare:** API token for the account owning `littleslatehouse.co.uk` (Workers Scripts edit, D1 edit, Pages read, DNS read). Add it as environment secret `CLOUDFLARE_API_TOKEN` and allow `api.cloudflare.com`.
-2. **Feeds (as Worker secrets only):** `ICAL_TC_URL` (Travel Chapter TABs feed) and `ICAL_OWNER_URL` (the existing dedicated Google feed; **keep the URL unchanged**, since Travel Chapter may already subscribe to it).
-3. **Google write access:** OAuth client + refresh token for an account with write access to the dedicated calendar (`GOOGLE_*` secrets). For TEST, use a separate throwaway calendar.
-4. **Confirm with Travel Chapter** that they have added the owner Google feed (two-way sync complete). Ask also whether, once our system starts writing direct-booking blocks to that calendar, their import could duplicate owner bookings they already hold (e.g. New Year).
-5. **Booking Desk:** native export, and the existing saved welcome template.
-6. **Decisions:** payment policy (only full upfront is implemented); security deposit and refund policy (not implemented); draft templates to approve; which historical emails were actually sent for New Year.
-7. **Reconcile agent bookings:** after the first real sync, attach the Travel Chapter references from their booking emails to the matching blocks (`PUT /admin/external-blocks`). Kept out of this repo.
-8. **Feed rotation:** no leak found in this repo. If either URL was ever shared beyond the owner and Travel Chapter, coordinate rotation with Travel Chapter first.
-
-## 5. Migration and backup
-
-- Schema: `booking-api/migrations/0001_init.sql` (bookings, night locks + external-block trigger, calendar sources, iCal events, pending changes, payments, Stripe events, templates, email log, audit) and `0002_seed_templates.sql`.
-- `npm run backup:live` (D1 export) before every live migration; D1 Time Travel for point-in-time restore.
-- The New Year booking is imported with a dry run first, linked to the agent's block, and never re-published, charged or emailed.
-
-## 6. DNS still to fix (Resend domain status FAILED)
-
-Add in Cloudflare DNS for `littleslatehouse.co.uk`, **DNS-only (grey cloud)**, keeping every existing record. Values are from the Resend API:
+## 7. DNS records still to add (Resend; DNS-only / grey cloud; keep all existing records)
 
 | Type | Name | Value |
 |---|---|---|
@@ -87,33 +143,29 @@ Add in Cloudflare DNS for `littleslatehouse.co.uk`, **DNS-only (grey cloud)**, k
 | CNAME | `rsend` | `rsend-apne1.forge.rmta.net` |
 | CNAME | `send` | `send.forge.rmta.net` |
 
-Then click Verify in Resend. Connector checks: Stripe is connected in **test mode only** (no v1 webhook endpoints in test); Resend has 0 webhooks.
+## 8. Safe deployment steps (each reversible)
 
-## 7. Safe go-live operation (proposed, for owner agreement)
+1. **Backup first:** note the current Pages production deployment (Pages → Deployments). No Pages change is planned. If the one-line `global.css` change is merged, the site output stays identical (verified).
+2. **TEST:**
+   - `wrangler d1 create lsh-booking-test` → set `database_id` in `[env.test]` → `migrations apply --env test --remote`.
+   - Set the TEST secrets (Stripe test keys, allow-listed test inboxes, **disposable** Google calendar and feed, read-only copy of the Travel Chapter feed).
+   - `wrangler deploy --env test`.
+   - Register sources, load the welcome template, run `/admin/run hourly`, check `/admin/status`.
+3. **TEST round trip:**
+   - Quote → pay with Stripe test card `4242…` (authorise) → block appears on the disposable calendar → confirm with `owner_verified_with_agent` → capture → emails to test inboxes only.
+   - Then: cancellation through the change queue, a declined card (`4000 0000 0000 0002`), webhook replay from the Stripe dashboard, and a mocked-clock welcome run.
+4. **LIVE with automation OFF:**
+   - `wrangler d1 create lsh-booking`, `npm run backup:live` (empty), migrate, deploy with `AUTOMATION_ENABLED=false`, `STRIPE_MODE=test`, `PAYMENT_POLICY` empty.
+   - Register the real feeds (read-only pull). Compare `/admin/external-blocks` with the Travel Chapter owner portal and the Gmail-detected stays. Attach agent refs.
+5. **Reconcile New Year:** dry-run import (linked to the agent block, payment reconciled, welcome marked as handled in Gmail), review, then `apply`.
+6. **Only after Travel Chapter's answer and your written approval:** live Stripe keys + live webhook, `STRIPE_MODE=live`, `PAYMENT_POLICY=full_upfront`, `AUTOMATION_ENABLED=true`, keeping `CAPTURE_MODE=manual`.
 
-Until a real-time cross-channel lock or confirmation exists with Travel Chapter:
+## 9. Rollback
 
-1. Quote only when `/admin/status` shows calendars **ok**.
-2. Guests authorise; nothing is charged.
-3. Confirm and capture only after the Travel Chapter feed shows the block, or after confirming dates directly with Travel Chapter.
-4. Make all cancellations and amendments through the coordinated-change queue at an agreed time.
-
-`CAPTURE_MODE` stays `manual`.
-
-## 8. Launch and rollback
-
-**Launch (each step reversible):**
-1. Deploy TEST (throwaway Google calendar, Stripe test keys, allow-listed email).
-2. Do a real test round trip.
-3. Deploy LIVE with automation OFF.
-4. Register feeds and run a sync. Review `/admin/external-blocks` against the Travel Chapter owner portal.
-5. Import the New Year booking (dry run, then apply).
-6. Only on **explicit written owner approval**: live Stripe keys, `STRIPE_MODE=live`, `PAYMENT_POLICY=full_upfront`, `AUTOMATION_ENABLED=true` (keeping `CAPTURE_MODE=manual`).
-
-**Rollback, in order:**
-1. `AUTOMATION_ENABLED=false` (immediate stop).
-2. `wrangler rollback` (Worker code).
-3. D1 Time Travel or backup restore (data).
-4. `wrangler delete` (remove the Worker). Any published Google blocks are then removed through the coordinated procedure.
-
-The Pages site is unaffected throughout.
+| Situation | Action |
+|---|---|
+| Any doubt in production | set `AUTOMATION_ENABLED=false` (dashboard variable or redeploy): guest email and live Stripe writes stop immediately; webhooks keep recording |
+| Bad Worker release | `npx wrangler rollback` (or `wrangler deployments list` → chosen version) |
+| Bad data or migration | `npx wrangler d1 time-travel restore lsh-booking --timestamp=<before>`, or restore `backups/*.sql` (rehearsed: `scripts/rollback-rehearsal.sh`) |
+| Remove the backend | `npx wrangler delete` (Worker only). Remove any published Google blocks via the coordinated procedure, never by deleting from one side only. |
+| Website | untouched by the backend. If needed, roll back the Pages deployment from the Pages dashboard; reverting the one-line `global.css` change is also safe. |

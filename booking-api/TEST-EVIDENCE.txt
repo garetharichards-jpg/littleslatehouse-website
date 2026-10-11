@@ -1,116 +1,130 @@
-# lsh-booking-api local test run — 2026-10-11T08:21Z
+# lsh-booking-api local test run — 2026-10-11T08:53Z
 # Miniflare (workerd) + in-memory D1; Stripe/Resend/Google Calendar/iCal feeds mocked; fictional data only.
 ▶ safety rails
-  ✔ no refund endpoint exists (17.017309ms)
-  ✔ admin endpoints require the admin token (6.356767ms)
-  ✔ cancelling a booking issues no refund and makes no Stripe call (40.041885ms)
-✔ safety rails (902.733605ms)
+  ✔ no refund endpoint exists (16.460611ms)
+  ✔ admin endpoints require the admin token (6.718246ms)
+  ✔ cancelling a booking issues no refund and makes no Stripe call (33.820314ms)
+✔ safety rails (859.477232ms)
 ▶ live environment lockout
-  ✔ live Stripe key refused while AUTOMATION_ENABLED=false; test hooks ignored in live (735.024421ms)
-  ✔ payment policy must be approved before checkout (697.773238ms)
-✔ live environment lockout (1433.289907ms)
+  ✔ live Stripe key refused while AUTOMATION_ENABLED=false; test hooks ignored in live (679.43944ms)
+  ✔ payment policy must be approved before checkout (718.085195ms)
+✔ live environment lockout (1398.011396ms)
 ▶ calendar availability fails closed
-  ✔ no calendar source => holds refused, availability unknown (590.767725ms)
-  ✔ blocked (HTTP 403) feed => unknown, not available (721.701975ms)
-  ✔ empty feed => treated as unverified (698.097863ms)
-  ✔ feed failure keeps previous blocks; becomes unknown once stale (723.199017ms)
-  ✔ agent nights block holds; our own Google events are not treated as conflicts (806.644368ms)
-✔ calendar availability fails closed (3541.171714ms)
+  ✔ no calendar source => holds refused, availability unknown (535.938976ms)
+  ✔ blocked (HTTP 403) feed => unknown, not available (665.523959ms)
+  ✔ empty feed => treated as unverified (637.521308ms)
+  ✔ feed failure keeps previous blocks; becomes unknown once stale (659.013589ms)
+  ✔ agent nights block holds; our own Google events are not treated as conflicts (810.110074ms)
+✔ calendar availability fails closed (3308.946262ms)
 ▶ booking conflicts and holds
-  ✔ overlap rejected, back-to-back allowed (59.403065ms)
-  ✔ concurrent overlapping holds: exactly one wins (154.549641ms)
-  ✔ validation: party size and agreed amount required (6.905237ms)
-  ✔ unpaid hold expires and releases nights (83.221781ms)
-✔ booking conflicts and holds (951.552122ms)
+  ✔ overlap rejected, back-to-back allowed (71.449535ms)
+  ✔ concurrent overlapping holds: exactly one wins (162.481245ms)
+  ✔ validation: party size and agreed amount required (7.138917ms)
+  ✔ unpaid hold expires and releases nights (65.909377ms)
+✔ booking conflicts and holds (967.113801ms)
 ▶ Stripe checkout and webhooks
-  ✔ pay link: wrong token 404; correct token redirects to Stripe; re-click reuses session (64.281861ms)
-  ✔ signature: missing, wrong secret, stale timestamp all rejected (34.580808ms)
-  ✔ live-mode event ignored by test deployment (3.96869ms)
-✔ Stripe checkout and webhooks (779.057302ms)
+  ✔ pay link: wrong token 404; correct token redirects to Stripe; re-click reuses session (62.301629ms)
+  ✔ signature: missing, wrong secret, stale timestamp all rejected (25.497007ms)
+  ✔ live-mode event ignored by test deployment (3.321922ms)
+✔ Stripe checkout and webhooks (708.982649ms)
 ▶ payment success, replay and idempotency
-  ✔ completed => confirmed, guest + management emailed once (90.800907ms)
-  ✔ exact replay => acknowledged as duplicate, no extra email (10.081845ms)
-  ✔ different event for the same paid session => no-op (33.755286ms)
-  ✔ confirmed booking pay link does not create another charge (5.335783ms)
-  ✔ refund made manually in Stripe is only recorded (18.359335ms)
-✔ payment success, replay and idempotency (919.854436ms)
+  ✔ completed => confirmed, guest + management emailed once (88.012269ms)
+  ✔ exact replay => acknowledged as duplicate, no extra email (7.870412ms)
+  ✔ different event for the same paid session => no-op (29.153251ms)
+  ✔ confirmed booking pay link does not create another charge (4.807838ms)
+  ✔ refund made manually in Stripe is only recorded (19.070465ms)
+✔ payment success, replay and idempotency (864.088088ms)
 ▶ processing failure and Stripe retry
-  ✔ crash mid-processing => 500, then retry confirms exactly once (910.811052ms)
-✔ processing failure and Stripe retry (911.042422ms)
+  ✔ crash mid-processing => 500, then retry confirms exactly once (771.578761ms)
+✔ processing failure and Stripe retry (771.835621ms)
 ▶ failed and abandoned payments
-  ✔ declined card is recorded; hold kept so guest can retry (66.999004ms)
-  ✔ session expired within hold => back to hold, guest can pay again; no email (104.962382ms)
-  ✔ session expired after hold ended => released, dates rebookable (112.363674ms)
-  ✔ payment arriving after the booking returned to hold still confirms (167.906726ms)
-  ✔ amount mismatch => not confirmed, flagged for owner (140.459622ms)
-  ✔ late payment after expiry: confirmed if dates free, flagged (no refund) if taken (221.22672ms)
-✔ failed and abandoned payments (1565.148604ms)
+  ✔ declined card is recorded; hold kept so guest can retry (68.008685ms)
+  ✔ session expired within hold => back to hold, guest can pay again; no email (104.84585ms)
+  ✔ session expired after hold ended => released, dates rebookable (75.402702ms)
+  ✔ payment arriving after the booking returned to hold still confirms (139.241261ms)
+  ✔ amount mismatch => not confirmed, flagged for owner (124.043457ms)
+  ✔ late payment after expiry: confirmed if dates free, flagged (no refund) if taken (200.872698ms)
+✔ failed and abandoned payments (1380.793713ms)
 ▶ email gating, delivery failure and retry
-  ✔ non-allow-listed guest is never emailed while automation is off (832.584582ms)
-  ✔ Resend outage => failed, retried by hourly job, delivered exactly once (928.929595ms)
-  ✔ gives up after 5 attempts and reports it (1183.340037ms)
-✔ email gating, delivery failure and retry (2945.28352ms)
+  ✔ non-allow-listed guest is never emailed while automation is off (771.197445ms)
+  ✔ Resend outage => failed, retried by hourly job, delivered exactly once (911.308687ms)
+  ✔ gives up after 5 attempts and reports it (1225.16812ms)
+✔ email gating, delivery failure and retry (2908.263971ms)
 ▶ two-day pre-arrival welcome email (mocked clock)
-  ✔ 3 days before: nothing (94.211399ms)
-  ✔ 2 days before: sent once with surname, dates, nights, entry code (96.945277ms)
-  ✔ re-run same day and next day: no duplicate (141.130564ms)
-  ✔ London date is used across BST (late-evening UTC run) (239.487459ms)
-  ✔ unapproved welcome template => not sent, maintenance flags it (890.169366ms)
-✔ two-day pre-arrival welcome email (mocked clock) (2378.759408ms)
+  ✔ 3 days before: nothing (64.704445ms)
+  ✔ 2 days before: sent once with surname, dates, nights, entry code (64.280042ms)
+  ✔ re-run same day and next day: no duplicate (105.682167ms)
+  ✔ London date is used across BST (late-evening UTC run) (142.771427ms)
+  ✔ unapproved welcome template => not sent, maintenance flags it (1136.476708ms)
+✔ two-day pre-arrival welcome email (mocked clock) (2356.276483ms)
 ▶ import and reconcile an existing paid booking
-  ✔ dry run (default) writes nothing and calls nothing (33.177147ms)
-  ✔ apply: confirmed, payment linked, no charge, no confirmation email (28.181922ms)
-  ✔ re-running the import creates nothing new (53.486008ms)
-  ✔ a late webhook for the reconciled payment does not re-confirm or email (33.822853ms)
-  ✔ daily runs before 28 Dec send nothing; on 28 Dec only the welcome is sent (134.941945ms)
-  ✔ amount mismatch and conflicting dates are refused (15.369745ms)
-✔ import and reconcile an existing paid booking (981.21086ms)
+  ✔ dry run (default) writes nothing and calls nothing (26.496692ms)
+  ✔ apply: confirmed, payment linked, no charge, no confirmation email (27.039583ms)
+  ✔ re-running the import creates nothing new (39.038203ms)
+  ✔ a late webhook for the reconciled payment does not re-confirm or email (23.674874ms)
+  ✔ daily runs before 28 Dec send nothing; on 28 Dec only the welcome is sent (123.781771ms)
+  ✔ amount mismatch and conflicting dates are refused (11.29823ms)
+✔ import and reconcile an existing paid booking (902.946255ms)
 ▶ kill switch
-  ✔ setting AUTOMATION_ENABLED=false stops guest email immediately (rollback of automation) (1604.21285ms)
-✔ kill switch (1604.464113ms)
+  ✔ setting AUTOMATION_ENABLED=false stops guest email immediately (rollback of automation) (1515.995117ms)
+✔ kill switch (1516.239853ms)
+▶ pricing: discounts only through an approved rule
+  ✔ no approved rules (default): any discount is refused; plain agreed total is accepted (864.863615ms)
+  ✔ approved rule: total must equal list price minus the rule exactly (728.432898ms)
+✔ pricing: discounts only through an approved rule (1594.327151ms)
+▶ damage deposit: not collected, never refunded
+  ✔ a direct booking cannot carry a damage deposit or waiver; Checkout has one accommodation line only (723.557332ms)
+✔ damage deposit: not collected, never refunded (723.800565ms)
+▶ New Year reconciliation with the welcome already scheduled in Gmail
+  ✔ nothing is ever sent by this system; the 27 vs 28 Dec discrepancy is flagged for approval (887.079821ms)
+✔ New Year reconciliation with the welcome already scheduled in Gmail (887.298474ms)
+▶ cleaner / management notifications
+  ✔ management gets new-booking and cancellation notices at the test address only (897.828582ms)
+  ✔ a real management address is blocked while automation is off (787.99412ms)
+✔ cleaner / management notifications (1686.363567ms)
 ▶ deferred authorisation: nothing is charged until dates are confirmed across channels
-  ✔ authorise -> publish -> agent echo -> owner confirm -> capture (1033.538835ms)
-  ✔ live immediate capture is refused even with automation on (741.167406ms)
-  ✔ authorisation lapses: published dates go to coordinated release, not silently freed (871.656728ms)
-✔ deferred authorisation: nothing is charged until dates are confirmed across channels (2647.807053ms)
+  ✔ authorise -> publish -> agent echo -> owner confirm -> capture (1006.8126ms)
+  ✔ live immediate capture is refused even with automation on (680.338083ms)
+  ✔ authorisation lapses: published dates go to coordinated release, not silently freed (801.01852ms)
+✔ deferred authorisation: nothing is charged until dates are confirmed across channels (2489.424676ms)
 ▶ 24-hour propagation lag
-  ✔ pending inside the window, flagged after it, cleared when the agent shows the block (1052.595723ms)
-  ✔ owner may confirm early only by stating they verified dates with the agent (913.292921ms)
-✔ 24-hour propagation lag (1966.338584ms)
+  ✔ pending inside the window, flagged after it, cleared when the agent shows the block (974.628906ms)
+  ✔ owner may confirm early only by stating they verified dates with the agent (793.014078ms)
+✔ 24-hour propagation lag (1767.935827ms)
 ▶ bookings created on either channel
-  ✔ agent booking blocks a direct quote (822.208307ms)
-  ✔ overlap race: agent booking lands after our quote but before payment -> checkout refused (824.506472ms)
-  ✔ overlap race after authorisation: critical alert, owner confirmation blocked (1078.553677ms)
-  ✔ back-to-back with an agent booking is allowed (checkout-exclusive DTEND) (786.104729ms)
-✔ bookings created on either channel (3512.189649ms)
+  ✔ agent booking blocks a direct quote (700.661592ms)
+  ✔ overlap race: agent booking lands after our quote but before payment -> checkout refused (693.704317ms)
+  ✔ overlap race after authorisation: critical alert, owner confirmation blocked (826.003418ms)
+  ✔ back-to-back with an agent booking is allowed (checkout-exclusive DTEND) (745.976751ms)
+✔ bookings created on either channel (2967.455236ms)
 ▶ feed failures fail closed
-  ✔ missed fetch keeps blocks; empty agent feed is unverified; empty owner feed is allowed (747.752001ms)
-  ✔ feed URLs never appear in status, errors or source config (758.022038ms)
-  ✔ timed DTSTART/DTEND are converted to Europe/London property dates (728.682809ms)
-✔ feed failures fail closed (2234.850088ms)
+  ✔ missed fetch keeps blocks; empty agent feed is unverified; empty owner feed is allowed (716.989303ms)
+  ✔ feed URLs never appear in status, errors or source config (707.415701ms)
+  ✔ timed DTSTART/DTEND are converted to Europe/London property dates (714.994977ms)
+✔ feed failures fail closed (2139.80027ms)
 ▶ disappearing blocks, ghosts and amendments are never auto-released
-  ✔ missing block stays blocked until the owner records a coordinated release (765.242505ms)
-  ✔ transient omission: block returns before anyone acts -> item closes itself (721.816656ms)
-  ✔ released block reappearing (same or new UID) is a ghost: blocked and flagged, not a new booking (807.329563ms)
-  ✔ agent amendment keeps the old dates blocked until coordinated (703.980896ms)
-✔ disappearing blocks, ghosts and amendments are never auto-released (2998.89928ms)
+  ✔ missing block stays blocked until the owner records a coordinated release (790.173059ms)
+  ✔ transient omission: block returns before anyone acts -> item closes itself (754.717538ms)
+  ✔ released block reappearing (same or new UID) is a ghost: blocked and flagged, not a new booking (838.20031ms)
+  ✔ agent amendment keeps the old dates blocked until coordinated (730.131727ms)
+✔ disappearing blocks, ghosts and amendments are never auto-released (3113.642287ms)
 ▶ coordinated cancellation of a direct booking
-  ✔ cancel -> pending (still blocked) -> agreed time -> release -> verified when the agent drops it (1040.032935ms)
-  ✔ agent still showing a cancelled booking >26h after release is reported (887.4289ms)
-  ✔ Google outage during release: nothing is released (818.828438ms)
-✔ coordinated cancellation of a direct booking (2746.663968ms)
+  ✔ cancel -> pending (still blocked) -> agreed time -> release -> verified when the agent drops it (1194.246927ms)
+  ✔ agent still showing a cancelled booking >26h after release is reported (960.456844ms)
+  ✔ Google outage during release: nothing is released (785.301131ms)
+✔ coordinated cancellation of a direct booking (2940.414591ms)
 ▶ reconciling the existing owner booking held by Travel Chapter
-  ✔ links to the matching agent block; no Google publish, no email, no Stripe; re-run and re-sync are no-ops (751.211712ms)
-  ✔ a partial overlap with another agent block is refused (686.356838ms)
-✔ reconciling the existing owner booking held by Travel Chapter (1437.845395ms)
-ℹ tests 65
-ℹ suites 19
-ℹ pass 65
+  ✔ links to the matching agent block; no Google publish, no email, no Stripe; re-run and re-sync are no-ops (724.588885ms)
+  ✔ a partial overlap with another agent block is refused (670.756381ms)
+✔ reconciling the existing owner booking held by Travel Chapter (1395.697121ms)
+ℹ tests 71
+ℹ suites 23
+ℹ pass 71
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 37893.635299
+ℹ duration_ms 41666.709316
 
 1. apply migrations
 2. seed a fictional confirmed booking
@@ -119,5 +133,7 @@
 4. simulate a bad change
    damaged: [{"id":"LSH-TEST-1","status":"cancelled"}]
 5. restore: drop tables, re-import backup
-   after:  [{"id":"LSH-TEST-1","status":"confirmed"}]  templates: [{"n":5}]
+   after:  [{"id":"LSH-TEST-1","status":"confirmed"}]  templates: [{"n":6}]
 ROLLBACK REHEARSAL: PASS
+
+SITE REGRESSION: PASS (24 files identical to main)

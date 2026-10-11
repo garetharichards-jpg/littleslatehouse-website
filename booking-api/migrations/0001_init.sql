@@ -11,7 +11,9 @@ CREATE TABLE bookings (
   arrival          TEXT NOT NULL,
   departure        TEXT NOT NULL CHECK (departure > arrival),
   nights           INTEGER NOT NULL,
-  amount_pence     INTEGER NOT NULL CHECK (amount_pence > 0),
+  amount_pence     INTEGER NOT NULL CHECK (amount_pence > 0),  -- agreed accommodation total
+  list_price_pence INTEGER,                        -- before discount, when a discount rule was applied
+  discount_rule    TEXT,                           -- name of an owner-approved rule (APPROVED_DISCOUNT_RULES)
   currency         TEXT NOT NULL DEFAULT 'gbp',
   status           TEXT NOT NULL CHECK (status IN ('hold','pending_payment','authorized','confirmed','cancellation_pending','cancelled','expired')),
   hold_expires_at  TEXT,
@@ -152,6 +154,7 @@ CREATE TABLE email_log (
   status      TEXT NOT NULL CHECK (status IN ('pending','sending','sent','failed','suppressed','historical')),
   attempts    INTEGER NOT NULL DEFAULT 0,
   claimed_at  TEXT,
+  note        TEXT,                              -- e.g. 'scheduled externally in Gmail for 2026-12-27'
   provider_id TEXT,
   last_error  TEXT,
   created_at  TEXT NOT NULL,

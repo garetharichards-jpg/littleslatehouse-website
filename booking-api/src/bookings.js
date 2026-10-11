@@ -77,6 +77,32 @@ function validateBookingInput(b) {
   if (errs.length) throw new HttpError(400, 'invalid fields', { fields: errs });
 }
 
+// Direct damage deposits/waivers are not approved for direct bookings; the agent's scheme does not apply here.
+function refuseDamageDeposit(b) {
+  if (b.damage_deposit_pence || b.damage_waiver_pence) {
+    throw new HttpError(400, 'damage deposit/waiver collection is not approved for direct bookings');
+  }
+}
+
+// Discounts apply only through an owner-approved rule (APPROVED_DISCOUNT_RULES, JSON {"name": percent}).
+// With no approved rules (the default), any discount is refused. The agreed total must match exactly.
+export function validatePricing(env, b) {
+  refuseDamageDeposit(b);
+  if (!b.discount_rule && b.list_price_pence === undefined) return { list_price_pence: null, discount_rule: null };
+  let rules = {};
+  try { rules = JSON.parse(env.APPROVED_DISCOUNT_RULES || '{}'); } catch { rules = {}; }
+  if (!b.discount_rule || !(b.discount_rule in rules)) {
+    throw new HttpError(409, 'discount rule not approved', { rule: b.discount_rule ?? null, approved: Object.keys(rules) });
+  }
+  if (!Number.isInteger(b.list_price_pence) || b.list_price_pence <= 0) throw new HttpError(400, 'list_price_pence required with a discount');
+  const pct = Number(rules[b.discount_rule]);
+  const expected = b.list_price_pence - Math.round((b.list_price_pence * pct) / 100);
+  if (b.amount_pence !== expected) {
+    throw new HttpError(409, 'agreed total does not match the approved discount rule', { expected_amount_pence: expected, pct });
+  }
+  return { list_price_pence: b.list_price_pence, discount_rule: b.discount_rule };
+}
+
 // ---- Holds (created by the owner after agreeing dates/price with the guest) ----
 
 async function requireFreshCalendars(env, db, now, fetcher) {
@@ -88,6 +114,7 @@ async function requireFreshCalendars(env, db, now, fetcher) {
 
 export async function createHold(env, db, now, input, fetcher = fetch) {
   validateBookingInput(input);
+  const pricing = validatePricing(env, input);
   await requireFreshCalendars(env, db, now, fetcher);
 
   const id = newBookingId(input.arrival);
@@ -100,10 +127,11 @@ export async function createHold(env, db, now, input, fetcher = fetch) {
     await db.batch([
       db.prepare(
         `INSERT INTO bookings (id, guest_name, guest_surname, guest_email, payer_name, party_size, arrival, departure, nights,
-           amount_pence, currency, status, hold_expires_at, pay_token, source, notes, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'gbp', 'hold', ?, ?, 'direct', ?, ?, ?)`,
+           amount_pence, list_price_pence, discount_rule, currency, status, hold_expires_at, pay_token, source, notes, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'gbp', 'hold', ?, ?, 'direct', ?, ?, ?)`,
       ).bind(id, input.guest_name, input.guest_surname, input.guest_email, input.payer_name ?? null, input.party_size,
-        input.arrival, input.departure, nights, input.amount_pence, iso(expires), payToken, input.notes ?? null, iso(now), iso(now)),
+        input.arrival, input.departure, nights, input.amount_pence, pricing.list_price_pence, pricing.discount_rule,
+        iso(expires), payToken, input.notes ?? null, iso(now), iso(now)),
       ...lockStatements(db, id, input.arrival, input.departure, now),
     ]);
   } catch (err) {
@@ -556,8 +584,15 @@ export async function cancelBooking(env, db, now, id, body, fetcher = fetch) {
 // Never calls Stripe or Google. Never sends email. Dry-run unless apply === true.
 
 export async function importBooking(env, db, now, body) {
-  const { booking: input, payment, historical_emails: historical = [], apply = false, agent_ref: agentRef = null } = body || {};
+  const {
+    booking: input, payment, historical_emails: historical = [], external_emails: handledElsewhere = [],
+    prior_correspondence: prior = [], apply = false, agent_ref: agentRef = null,
+  } = body || {};
   validateBookingInput(input);
+  for (const e of handledElsewhere) {
+    if (!e?.template || !e?.note) throw new HttpError(400, 'external_emails entries need template and note');
+    if (e.scheduled_for && !isDate(e.scheduled_for)) throw new HttpError(400, 'external_emails.scheduled_for must be YYYY-MM-DD');
+  }
   const plan = { apply, actions: [], warnings: [] };
 
   if (payment) {
@@ -589,7 +624,14 @@ export async function importBooking(env, db, now, body) {
   plan.actions.push('NOT published to Google automatically (the agent already holds this booking; publishing could duplicate it there)');
   if (payment) plan.actions.push(`record existing payment ${payment.payment_intent_id} (${fmtGBP(payment.amount_pence)}) as succeeded/reconciled; no Stripe call`);
   for (const t of historical) plan.actions.push(`mark '${t}' email as historical (already handled; will not be sent)`);
-  plan.actions.push('welcome email remains scheduled for arrival minus 2 days (subject to AUTOMATION_ENABLED and approved template)');
+  for (const e of handledElsewhere) plan.actions.push(`mark '${e.template}' as handled outside this system${e.scheduled_for ? ` (scheduled for ${e.scheduled_for})` : ''}: this system will never send it`);
+  for (const c of prior) plan.actions.push(`record prior correspondence in audit: ${c}`);
+  if (!handledElsewhere.some((e) => e.template === 'welcome')) {
+    plan.actions.push('welcome email remains scheduled for arrival minus 2 days (subject to AUTOMATION_ENABLED and approved template)');
+  }
+  if (!historical.includes('confirmation') && !handledElsewhere.some((e) => e.template === 'confirmation')) {
+    plan.warnings.push('no post-payment confirmation recorded; this system will NOT send one for an imported booking (owner decision)');
+  }
   if (!payment) plan.warnings.push('no payment supplied: booking imported as confirmed without a payment record');
 
   if (!apply) return { ...plan, result: 'dry_run' };
@@ -624,8 +666,17 @@ export async function importBooking(env, db, now, body) {
        VALUES (?, ?, ?, ?, ?, 'historical', 0, ?)`,
     ).bind(uuid(), id, t, recipient, `${t}:${id}`, iso(now)));
   }
+  for (const e of handledElsewhere) {
+    stmts.push(db.prepare(
+      `INSERT INTO email_log (id, booking_id, template, recipient, dedupe_key, status, attempts, note, created_at)
+       VALUES (?, ?, ?, ?, ?, 'suppressed', 0, ?, ?)`,
+    ).bind(uuid(), id, e.template, input.guest_email, `${e.template}:${id}`,
+      `${e.note}${e.scheduled_for ? ` [scheduled_for=${e.scheduled_for}]` : ''}`, iso(now)));
+  }
   stmts.push(db.prepare('INSERT INTO audit_log (at, actor, action, booking_id, detail) VALUES (?, ?, ?, ?, ?)')
-    .bind(iso(now), 'admin', 'imported', id, JSON.stringify({ payment: payment?.payment_intent_id ?? null, historical, agent_ref: agentRef })));
+    .bind(iso(now), 'admin', 'imported', id, JSON.stringify({
+      payment: payment?.payment_intent_id ?? null, historical, external_emails: handledElsewhere, prior_correspondence: prior, agent_ref: agentRef,
+    })));
   try {
     await db.batch(stmts);
   } catch (err) {
