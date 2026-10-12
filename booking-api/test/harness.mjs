@@ -106,7 +106,10 @@ export async function start(bindingOverrides = {}) {
       }
       if (url === TC_URL) return new Response(world.tc, { status: world.tcStatus });
       if (url === OWNER_URL) return new Response(world.owner, { status: world.ownerStatus });
-      if (url === 'https://oauth2.googleapis.com/token') return Response.json({ access_token: 'gtoken' });
+      if (url === 'https://oauth2.googleapis.com/token') {
+        if (body.includes('grant_type=authorization_code')) return Response.json({ id_token: world.idToken ?? null }, { status: world.idToken ? 200 : 400 });
+        return Response.json({ access_token: 'gtoken' });
+      }
       const g = /^https:\/\/www\.googleapis\.com\/calendar\/v3\/calendars\/[^/]+\/events(?:\/([^/?]+))?/.exec(url);
       if (g) {
         if (world.googleStatus !== 200) return new Response('google down', { status: world.googleStatus });

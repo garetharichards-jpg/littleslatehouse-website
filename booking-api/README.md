@@ -165,3 +165,14 @@ curl -X POST $API/admin/import -H "$H" -d '{
 | Bad Worker code | `npx wrangler rollback` |
 | Bad data or migration | `npx wrangler d1 time-travel restore lsh-booking --timestamp=…`, or restore a `backups/*.sql` export (see `scripts/rollback-rehearsal.sh`) |
 | Remove entirely | `npx wrangler delete`. Any Google blocks it published stay until removed through the coordinated procedure. The Pages site is unaffected. |
+
+## Owner sign-in (bookings.littleslatehouse.co.uk/admin)
+
+The live Worker is served at `https://bookings.littleslatehouse.co.uk`. Opening `/admin` in a browser asks
+for Google sign-in; only `ADMIN_EMAIL` (garetharichards@gmail.com) is accepted, and the session (12 hours)
+is read-only. Every change still needs `Authorization: Bearer <ADMIN_TOKEN>`.
+
+Setup: the Google OAuth client (a *Web application* client) must list
+`https://bookings.littleslatehouse.co.uk/auth/callback` as an authorised redirect URI, and the Worker needs
+the secrets `LOGIN_GOOGLE_CLIENT_ID`, `LOGIN_GOOGLE_CLIENT_SECRET` and `SESSION_SECRET` (`deploy-live.mjs`
+sets them from `LOGIN_GOOGLE_CLIENT_*` or `GOOGLE_CLIENT_*`). Until they are set, `/auth/login` returns 503.

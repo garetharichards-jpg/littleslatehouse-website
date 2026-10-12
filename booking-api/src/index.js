@@ -4,6 +4,9 @@
 import {
   cancelBooking, checkoutForPayLink, confirmAuthorized, createHold, getBooking, importBooking,
 } from './bookings.js';
+import {
+  adminHome, handleAuth, loginRedirect, sessionEmail, wantsHtml,
+} from './auth.js';
 import { availability, calendarStatus } from './calendar.js';
 import { completeChange, coordinateChange } from './coordination.js';
 import { daily, hourly } from './jobs.js';
@@ -49,9 +52,18 @@ async function route(request, env) {
     return json(r.body, r.status);
   }
 
-  // ---- Admin (Bearer ADMIN_TOKEN) ----
-  if (p.startsWith('/admin/')) {
-    if (!isAdmin(request, env)) throw new HttpError(401, 'unauthorised');
+  if (m === 'GET' && p.startsWith('/auth/')) return handleAuth(request, env, now, url);
+
+  // ---- Admin (Bearer ADMIN_TOKEN; the owner's Google session may read with GET) ----
+  if (p === '/admin' || p.startsWith('/admin/')) {
+    if (!isAdmin(request, env)) {
+      const email = m === 'GET' ? await sessionEmail(request, env, now) : null;
+      if (!email) {
+        if (wantsHtml(request)) return loginRedirect(url);
+        throw new HttpError(401, 'unauthorised');
+      }
+      if (p === '/admin' || p === '/admin/') return adminHome(email);
+    }
 
     if (m === 'GET' && p === '/admin/status') {
       const counts = await db.prepare('SELECT status, COUNT(*) AS n FROM bookings GROUP BY status').all();

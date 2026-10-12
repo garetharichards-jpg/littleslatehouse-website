@@ -87,6 +87,7 @@ let out = wr(['deploy', ...vars]);
 const url = (out.match(/https:\/\/lsh-booking-api\.[a-z0-9-]+\.workers\.dev/) || [])[0];
 if (!url) throw new Error('could not find workers.dev URL in deploy output');
 log(`LIVE URL: ${url}`);
+const PUBLIC_URL = 'https://bookings.littleslatehouse.co.uk'; // custom domain (wrangler.toml routes); guest pay links use it
 
 const secrets = {
   ADMIN_TOKEN: env.ADMIN_TOKEN_LIVE,
@@ -98,11 +99,18 @@ const secrets = {
   ICAL_TC_URL: env.ICAL_TC_URL,
   ICAL_OWNER_URL: env.ICAL_OWNER_URL,
 };
+// Owner's Google sign-in to /admin (read-only). The OAuth client needs ${PUBLIC_URL}/auth/callback as a redirect URI.
+const loginId = env.LOGIN_GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID;
+const loginSecret = env.LOGIN_GOOGLE_CLIENT_SECRET || env.GOOGLE_CLIENT_SECRET;
+if (loginId && loginSecret) {
+  Object.assign(secrets, { LOGIN_GOOGLE_CLIENT_ID: loginId, LOGIN_GOOGLE_CLIENT_SECRET: loginSecret,
+    SESSION_SECRET: env.SESSION_SECRET || Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url') });
+} else log('Google sign-in: no OAuth client in the environment; /admin stays token-only');
 if (has('MANAGEMENT_EMAIL')) secrets.MANAGEMENT_EMAIL = env.MANAGEMENT_EMAIL; // blocked by the allow-list until activation
 wr(['secret', 'bulk'], JSON.stringify(secrets));
 log(`secrets (names): ${Object.keys(secrets).sort().join(', ')}`);
-wr(['deploy', ...vars, '--var', `API_BASE_URL:${url}`]);
-log('redeployed with API_BASE_URL');
+wr(['deploy', ...vars, '--var', `API_BASE_URL:${PUBLIC_URL}`]);
+log(`redeployed with API_BASE_URL ${PUBLIC_URL}`);
 
 const api = async (method, path, body) => {
   const r = await fetch(`${url}${path}`, { method, headers: { authorization: `Bearer ${env.ADMIN_TOKEN_LIVE}`, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
