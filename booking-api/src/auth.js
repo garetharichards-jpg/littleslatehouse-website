@@ -126,7 +126,14 @@ export async function handleAuth(request, env, now, url) {
     const valid = r.ok && claims && ['accounts.google.com', 'https://accounts.google.com'].includes(claims.iss)
       && claims.aud === env.LOGIN_GOOGLE_CLIENT_ID && claims.exp > nowSec && claims.email_verified === true;
     const clear = setCookie(STATE_COOKIE, '', 0, '/auth');
-    if (!valid) return html('<p>Google sign-in failed. <a href="/admin">Try again</a></p>', 401, { 'set-cookie': clear });
+    if (!valid) {
+      // Google's error code and the failed check are safe to show; no token or secret is included.
+      const reason = !r.ok ? `token exchange: ${tok.error || r.status}` : !claims ? 'no ID token'
+        : claims.aud !== env.LOGIN_GOOGLE_CLIENT_ID ? 'audience mismatch' : claims.email_verified !== true ? 'email not verified'
+          : claims.exp <= nowSec ? 'token expired' : 'issuer mismatch';
+      console.log(JSON.stringify({ auth: 'google sign-in failed', reason }));
+      return html(`<p>Google sign-in failed (${esc(reason)}). <a href="/admin">Try again</a></p>`, 401, { 'set-cookie': clear });
+    }
     if (!sameEmail(claims.email, env.ADMIN_EMAIL)) {
       return html(`<p>${esc(claims.email)} is not allowed here. <a href="/auth/login">Use another account</a></p>`, 403, { 'set-cookie': clear });
     }
