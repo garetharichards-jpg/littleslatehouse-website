@@ -32,6 +32,9 @@ async function route(request, env) {
   const { pathname: p } = url;
   const m = request.method;
 
+  if (m === 'GET' && p === '/') {
+    return wantsHtml(request) ? Response.redirect(new URL('/admin', url), 302) : json({ service: 'Little Slate House booking API' });
+  }
   if (m === 'GET' && p === '/health') return json({ ok: true, environment: env.ENVIRONMENT, automation_enabled: automationEnabled(env) });
 
   if (m === 'GET' && p === '/api/availability') {

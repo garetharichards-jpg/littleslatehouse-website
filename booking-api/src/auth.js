@@ -83,7 +83,9 @@ export async function handleAuth(request, env, now, url) {
   if (p === '/auth/logout') {
     return html('<p>Signed out. <a href="/admin">Sign in again</a></p>', 200, { 'set-cookie': setCookie(SESSION_COOKIE, '', 0) });
   }
-  if (!loginConfigured(env)) throw new HttpError(503, 'Google sign-in is not configured');
+  if (!loginConfigured(env)) {
+    return html('<h1>Little Slate House — booking admin</h1><p>Google sign-in is not set up yet. Guests are unaffected; the website is at <a href="https://www.littleslatehouse.co.uk">www.littleslatehouse.co.uk</a>.</p>', 503);
+  }
   const base = env.LOGIN_BASE_URL.replace(/\/$/, '');
   const redirectUri = `${base}/auth/callback`;
   const nowSec = Math.floor(now.getTime() / 1000);

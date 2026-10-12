@@ -39,6 +39,10 @@ test('browser visit to /admin asks for Google sign-in; API clients still get 401
     assert.equal(r.status, 302);
     assert.equal(r.headers.get('location'), '/auth/login?next=%2Fadmin%2Fstatus');
     assert.equal((await t.api('GET', '/admin/status')).status, 401);
+    const root = await t.api('GET', '/', undefined, HTML);
+    assert.equal(root.status, 302);
+    assert.equal(root.headers.get('location'), 'http://api.test/admin');
+    assert.equal((await t.api('GET', '/')).status, 200);
   } finally { await t.stop(); }
 });
 
