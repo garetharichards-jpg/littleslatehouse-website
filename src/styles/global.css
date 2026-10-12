@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source not "../../booking-api";
 
 /* Peaches and Cream — same script font used on the Wix site */
 @font-face {

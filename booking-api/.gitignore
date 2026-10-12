@@ -1,0 +1,9 @@
+node_modules/
+.wrangler/
+.dev.vars
+backups/*.sql
+dist/
+imports/*.json
+!imports/*.example.json
+.admin-token.*
+.deploy-config.sql

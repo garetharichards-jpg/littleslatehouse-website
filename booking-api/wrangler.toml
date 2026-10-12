@@ -1,0 +1,81 @@
+# Little Slate House booking API.
+# LIVE (default env) ships with AUTOMATION_ENABLED = "false": no live payments, no non-allow-listed email.
+# Secrets are set with `wrangler secret put` and NEVER committed:
+#   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY, ADMIN_TOKEN, ENTRY_CODE,
+#   MANAGEMENT_EMAIL, MAINTENANCE_EMAIL, EMAIL_ALLOWLIST, MANAGEMENT_CONTACT_TEXT,
+#   ICAL_TC_URL (Travel Chapter TABs feed), ICAL_OWNER_URL (owner's dedicated Google calendar private iCal),
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, GOOGLE_CALENDAR_ID (write access to that calendar)
+# Feed URLs are credentials: never in this file, the repo, logs or chat.
+name = "lsh-booking-api"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[triggers]
+crons = ["*/30 * * * *", "45 6 * * *"]   # feeds every 30 min (Travel Chapter itself may still take 24h); daily 06:45 UTC reconcile + welcome
+
+[vars]
+ENVIRONMENT = "live"
+AUTOMATION_ENABLED = "false"
+STRIPE_MODE = "test"                 # set "live" only with owner approval
+PAYMENT_POLICY = "full_upfront"      # owner-approved 2026-10-12; payments still impossible without a live key + AUTOMATION_ENABLED
+CAPTURE_MODE = "manual"              # authorise only; capture after dates are confirmed across channels
+PUBLISH_MODE = "tc_portal"           # owner enters direct bookings in the Travel Chapter portal (current practice); "google" only after TC confirms no duplicates
+ALLOW_IMMEDIATE_CAPTURE_LIVE = "false"
+PROPAGATION_SLA_HOURS = "26"         # Travel Chapter import can take up to 24h
+SYNC_BEFORE_QUOTE = "true"
+TC_PROPERTY_CODE = "86295"
+APPROVED_DISCOUNT_RULES = "{}"       # owner decision 2026-10-12: no discounts
+DAILY_CRON = "45 6 * * *"
+HOLD_HOURS = "48"
+REQUIRE_AGENT_FEED = "true"
+CALENDAR_MAX_STALENESS_HOURS = "3"
+SITE_URL = "https://www.littleslatehouse.co.uk"
+SITE_ORIGINS = "https://www.littleslatehouse.co.uk,https://littleslatehouse.co.uk"
+FROM_EMAIL = "Little Slate House <bookings@littleslatehouse.co.uk>"
+API_BASE_URL = ""                    # set after first deploy, e.g. https://lsh-booking-api.<subdomain>.workers.dev
+ALLOW_CLOCK_OVERRIDE = "false"
+ALLOW_TEST_FAULTS = "false"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lsh-booking"
+database_id = "REPLACE_AFTER_wrangler_d1_create"
+migrations_dir = "migrations"
+
+# Isolated TEST deployment: separate Worker, separate D1, Stripe TEST keys, allow-listed email only.
+[env.test]
+name = "lsh-booking-api-test"
+workers_dev = true
+
+[env.test.triggers]
+crons = []                           # test jobs run on demand via POST /admin/run with a mocked clock
+
+[env.test.vars]
+ENVIRONMENT = "test"
+AUTOMATION_ENABLED = "false"
+STRIPE_MODE = "test"
+PAYMENT_POLICY = "full_upfront"      # test-only, so Checkout can be exercised
+CAPTURE_MODE = "manual"
+PUBLISH_MODE = "google"              # TEST exercises Google publishing against the disposable calendar only
+ALLOW_IMMEDIATE_CAPTURE_LIVE = "false"
+PROPAGATION_SLA_HOURS = "26"
+SYNC_BEFORE_QUOTE = "true"
+TC_PROPERTY_CODE = "00000"           # test: never the real property code
+APPROVED_DISCOUNT_RULES = "{}"
+DAILY_CRON = "45 6 * * *"
+HOLD_HOURS = "48"
+REQUIRE_AGENT_FEED = "true"
+CALENDAR_MAX_STALENESS_HOURS = "3"
+SITE_URL = "https://littleslatehouse-website.pages.dev"
+SITE_ORIGINS = ""
+FROM_EMAIL = "Little Slate House TEST <test@littleslatehouse.co.uk>"
+API_BASE_URL = ""
+ALLOW_CLOCK_OVERRIDE = "true"
+ALLOW_TEST_FAULTS = "true"
+
+[[env.test.d1_databases]]
+binding = "DB"
+database_name = "lsh-booking-test"
+database_id = "8b294f04-62e0-4422-8384-90be115cd1b6"
+migrations_dir = "migrations"

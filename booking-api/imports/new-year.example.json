@@ -1,0 +1,27 @@
+{
+  "_comment": "Copy to imports/new-year.json (gitignored), fill the <...> values privately, POST to /admin/import WITHOUT apply first, review, then add \"apply\": true.",
+  "booking": {
+    "guest_name": "<lead guest full name>",
+    "guest_surname": "<surname>",
+    "guest_email": "<guest email>",
+    "payer_name": "<payer name (differs from guest)>",
+    "party_size": 5,
+    "arrival": "2026-12-30",
+    "departure": "2027-01-03",
+    "amount_pence": 90000,
+    "notes": "Owner booking also held in Travel Chapter portal; paid via Stripe 2026-10-09 (no booking id in Stripe metadata)."
+  },
+  "payment": { "payment_intent_id": "<pi_... from Stripe>", "amount_pence": 90000, "livemode": true },
+  "agent_ref": "<Travel Chapter owner-booking reference>",
+  "historical_emails": [],
+  "external_emails": [
+    { "template": "welcome", "note": "personalised welcome scheduled in owner Gmail (10:04 UK time); 27 Dec date [owner_approved] 2026-10-12", "scheduled_for": "2026-12-27" }
+  ],
+  "prior_correspondence": [
+    "2026-09-29 Travel Chapter confirmed owner booking",
+    "2026-10-04 payment-link email sent to guest",
+    "2026-10-05 guest replied",
+    "2026-10-09 Stripe payment succeeded (GBP 900)",
+    "No post-payment confirmation or cleaner notice found in Gmail as of 2026-10-11"
+  ]
+}
