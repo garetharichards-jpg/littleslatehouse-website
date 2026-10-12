@@ -23,7 +23,7 @@ const REQUIRED = ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID', 'ADMIN_TOKEN_
 const problems = [];
 for (const k of REQUIRED) if (!has(k)) problems.push(`${k} missing`);
 const allow = (env.LIVE_EMAIL_ALLOWLIST || '').split(',').map((s) => s.trim()).filter(Boolean);
-if (has('MAINTENANCE_EMAIL') && allow.length && !allow.includes(env.MAINTENANCE_EMAIL.trim())) problems.push('MAINTENANCE_EMAIL is not in LIVE_EMAIL_ALLOWLIST');
+if (has('MAINTENANCE_EMAIL') && allow.length && !allow.map((a) => a.toLowerCase()).includes(env.MAINTENANCE_EMAIL.trim().toLowerCase())) problems.push('MAINTENANCE_EMAIL is not in LIVE_EMAIL_ALLOWLIST');
 if (has('ADMIN_TOKEN_LIVE') && env.ADMIN_TOKEN_LIVE.length < 24) problems.push('ADMIN_TOKEN_LIVE shorter than 24 characters');
 if (has('ADMIN_TOKEN_LIVE') && has('ADMIN_TOKEN_TEST') && env.ADMIN_TOKEN_LIVE === env.ADMIN_TOKEN_TEST) problems.push('ADMIN_TOKEN_LIVE must differ from ADMIN_TOKEN_TEST');
 if (has('ICAL_TEST_OWNER_URL') && env.ICAL_OWNER_URL === env.ICAL_TEST_OWNER_URL) problems.push('ICAL_OWNER_URL equals the TEST calendar feed');

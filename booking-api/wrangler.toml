@@ -40,7 +40,7 @@ ALLOW_TEST_FAULTS = "false"
 [[d1_databases]]
 binding = "DB"
 database_name = "lsh-booking"
-database_id = "REPLACE_AFTER_wrangler_d1_create"
+database_id = "7afe69a3-8380-4bfd-ae2f-94388f6164ca"
 migrations_dir = "migrations"
 
 # Isolated TEST deployment: separate Worker, separate D1, Stripe TEST keys, allow-listed email only.
