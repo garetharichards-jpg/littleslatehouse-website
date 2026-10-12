@@ -3,7 +3,7 @@
 // Bearer ADMIN_TOKEN, so a signed-in browser cannot be tricked into mutating anything (no CSRF surface).
 // Secrets: LOGIN_GOOGLE_CLIENT_ID, LOGIN_GOOGLE_CLIENT_SECRET, SESSION_SECRET. Vars: ADMIN_EMAIL, LOGIN_BASE_URL.
 
-import { HttpError } from './util.js';
+import { HttpError, audit } from './util.js';
 
 const SESSION_COOKIE = 'lsh_session';
 const STATE_COOKIE = 'lsh_oauth';
@@ -58,6 +58,11 @@ const html = (body, status = 200, headers = {}) => new Response(
   { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...headers } },
 );
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Sign-in outcomes go to the audit log so a failure can be diagnosed afterwards (never tokens or secrets).
+async function record(env, now, action, detail) {
+  try { await audit(env.DB, now, 'google_signin', action, null, detail); } catch (e) { console.error('audit failed', e && e.message); }
+}
 
 // Signed-in owner's email, or null.
 export async function sessionEmail(request, env, now) {
@@ -132,11 +137,14 @@ export async function handleAuth(request, env, now, url) {
         : claims.aud !== env.LOGIN_GOOGLE_CLIENT_ID ? 'audience mismatch' : claims.email_verified !== true ? 'email not verified'
           : claims.exp <= nowSec ? 'token expired' : 'issuer mismatch';
       console.log(JSON.stringify({ auth: 'google sign-in failed', reason }));
+      await record(env, now, 'signin_failed', { reason });
       return html(`<p>Google sign-in failed (${esc(reason)}). <a href="/admin">Try again</a></p>`, 401, { 'set-cookie': clear });
     }
     if (!sameEmail(claims.email, env.ADMIN_EMAIL)) {
+      await record(env, now, 'signin_refused', { email: claims.email });
       return html(`<p>${esc(claims.email)} is not allowed here. <a href="/auth/login">Use another account</a></p>`, 403, { 'set-cookie': clear });
     }
+    await record(env, now, 'signin_ok', { email: claims.email });
     const session = await sign(env, { email: claims.email, exp: nowSec + SESSION_SECONDS });
     const headers = new Headers({ location: safeNext(st.next), 'cache-control': 'no-store' });
     headers.append('set-cookie', clear);

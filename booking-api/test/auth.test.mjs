@@ -72,6 +72,9 @@ test('other Google accounts, wrong audience, unverified email and bad state are 
     assert.equal((await signIn(t, { aud: 'other-client' })).status, 401);
     assert.equal((await signIn(t, { email_verified: false })).status, 401);
     assert.equal((await t.api('GET', '/auth/callback?code=c1&state=forged', undefined, HTML)).status, 400);
+    const { results } = await t.db.prepare("SELECT action, detail FROM audit_log WHERE actor = 'google_signin' ORDER BY id").all();
+    assert.deepEqual(results.map((r) => r.action), ['signin_refused', 'signin_failed', 'signin_failed']);
+    assert.match(results[1].detail, /audience mismatch/);
   } finally { await t.stop(); }
 });
 
