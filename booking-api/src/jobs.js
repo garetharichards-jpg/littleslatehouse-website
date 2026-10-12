@@ -155,7 +155,7 @@ export async function reconcile(env, db, now, fetcher = fetch) {
   for (const w of external.results) {
     const when = /scheduled_for=(\d{4}-\d{2}-\d{2})/.exec(w.note || '')?.[1];
     const policy = addDays(w.arrival, -2); // saved policy: two days before arrival
-    if (when && when !== policy) {
+    if (when && when !== policy && !/\[owner_approved\]/.test(w.note || '')) {
       issues.push(`Welcome for ${w.booking_id} is scheduled outside this system for ${when}; policy date is ${policy}. Owner approval needed.`);
     }
   }

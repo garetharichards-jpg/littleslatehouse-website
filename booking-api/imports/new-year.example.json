@@ -15,7 +15,7 @@
   "agent_ref": "<Travel Chapter owner-booking reference>",
   "historical_emails": [],
   "external_emails": [
-    { "template": "welcome", "note": "personalised welcome scheduled in owner Gmail (10:04 UK time)", "scheduled_for": "2026-12-27" }
+    { "template": "welcome", "note": "personalised welcome scheduled in owner Gmail (10:04 UK time); 27 Dec date [owner_approved] 2026-10-12", "scheduled_for": "2026-12-27" }
   ],
   "prior_correspondence": [
     "2026-09-29 Travel Chapter confirmed owner booking",

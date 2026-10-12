@@ -88,6 +88,24 @@ describe('New Year reconciliation with the welcome already scheduled in Gmail', 
   });
 });
 
+describe('owner-approved external welcome date', () => {
+  test('a Gmail-scheduled date marked [owner_approved] is not flagged', async () => {
+    const t = await start({ CAPTURE_MODE: 'manual' });
+    try {
+      t.world.tc = ics([{ uid: 'owner-ny@tabs.test', start: '2026-12-30', end: '2027-01-03' }]);
+      await ready(t, { now: '2026-10-11T10:00:00Z' });
+      await t.admin('POST', '/admin/import', {
+        booking: guest({ arrival: '2026-12-30', departure: '2027-01-03', party_size: 5, amount_pence: 90000 }),
+        external_emails: [{ template: 'welcome', note: 'scheduled in Gmail [owner_approved]', scheduled_for: '2026-12-27' }],
+        apply: true,
+      }, { 'x-test-now': '2026-10-11T10:05:00Z' });
+      const d = await t.admin('POST', '/admin/run', { job: 'daily', now: '2026-12-28T06:45:00Z' });
+      assert.ok(!d.data.issues.some((i) => /scheduled outside this system/.test(i)));
+      assert.equal(t.emails().filter((e) => e.to[0] === 'guest@test.invalid').length, 0);
+    } finally { await t.stop(); }
+  });
+});
+
 describe('cleaner / management notifications', () => {
   test('management gets new-booking and cancellation notices at the test address only', async () => {
     const t = await start({ CAPTURE_MODE: 'manual' });

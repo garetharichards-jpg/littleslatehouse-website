@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Deploys the LIVE booking Worker (lsh-booking-api + D1 lsh-booking) with automation OFF:
-//   AUTOMATION_ENABLED=false, no Stripe key, PAYMENT_POLICY unset (no payments possible),
+//   AUTOMATION_ENABLED=false, no Stripe key (no payments possible), PAYMENT_POLICY=full_upfront (owner-approved),
 //   PUBLISH_MODE=tc_portal (no Google writes), email only to LIVE_EMAIL_ALLOWLIST.
 // Secret VALUES are piped to wrangler on stdin and never printed. The Pages site is not touched.
 //
@@ -80,7 +80,7 @@ writeFileSync(tomlPath, readFileSync(tomlPath, 'utf8')
 log(wr(['d1', 'migrations', 'apply', 'lsh-booking', '--remote']).split('\n').slice(-6).join('\n'));
 
 // Hard guarantees for this deploy, whatever wrangler.toml says.
-const vars = ['--var', 'AUTOMATION_ENABLED:false', '--var', 'STRIPE_MODE:test', '--var', 'PAYMENT_POLICY:', '--var', 'PUBLISH_MODE:tc_portal',
+const vars = ['--var', 'AUTOMATION_ENABLED:false', '--var', 'STRIPE_MODE:test', '--var', 'PAYMENT_POLICY:full_upfront', '--var', 'PUBLISH_MODE:tc_portal',
   '--var', 'CAPTURE_MODE:manual', '--var', 'ALLOW_CLOCK_OVERRIDE:false', '--var', 'ALLOW_TEST_FAULTS:false'];
 log('\n== Deploy lsh-booking-api (LIVE, automation OFF) ==');
 let out = wr(['deploy', ...vars]);

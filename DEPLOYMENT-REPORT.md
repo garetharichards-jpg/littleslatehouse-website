@@ -144,6 +144,14 @@ Scoped token (Cloudflare dashboard → My Profile → API Tokens → Create cust
 
 ## 5. Decisions needing your approval
 
+**Decided by owner 2026-10-12:**
+- Payment policy: **full upfront**, set as `PAYMENT_POLICY=full_upfront`. Payments are still impossible until a live Stripe key is added and automation is approved.
+- New Year welcome: **keep the Gmail-scheduled 27 Dec**. Recorded as owner-approved; the system will not send one and no longer flags the date.
+- Discounts: **none**. `APPROVED_DISCOUNT_RULES` stays empty.
+- 16–19 Oct 2026 block: **a genuine Travel Chapter agent booking** (reference held privately). The feed block is correct; nothing to change.
+- Still open: email wording (item 7 below); status of the 2–9 Apr 2027 hold.
+
+
 1. **New Year welcome date:** Gmail has it scheduled for **27 Dec**; the saved policy implies **28 Dec**. Keep, move, or cancel and let the system send it? Until you decide, the system will **not** send any welcome for this booking and will keep flagging it.
 2. **New Year confirmation:** no post-payment confirmation was found as sent. Send one manually, or none? The system will not generate one.
 3. **New Year management notice:** was cleaning or management already told about 30 Dec–3 Jan? This decides whether the import marks it historical.
